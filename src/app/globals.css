@@ -1,0 +1,617 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f4f7fb;
+  --bg-accent: #e8eef8;
+  --surface: #ffffff;
+  --surface-muted: #f8fafc;
+  --surface-soft: #f3f6fb;
+  --border: #ccd5e3;
+  --border-soft: #dfe6ef;
+  --border-faint: #ebf0f6;
+  --text: #0f172a;
+  --muted: #64748b;
+  --primary: #1d4ed8;
+  --primary-soft: #dbeafe;
+  --danger: #dc2626;
+  --danger-soft: #fee2e2;
+  --header: #0f172a;
+  --header-border: rgba(255, 255, 255, 0.28);
+  --shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 28%),
+    linear-gradient(180deg, var(--bg-accent), var(--bg));
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button,
+a,
+input,
+select {
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 24px;
+  background: rgba(15, 23, 42, 0.94);
+  color: #fff;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.16);
+}
+
+.topbar h1,
+.cardHeader h2 {
+  margin: 0;
+}
+
+.topbar h1 {
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  font-weight: 850;
+}
+
+.topbarActions,
+.sectionActions,
+.actions,
+.optionTools {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px 20px 40px;
+}
+
+.card,
+.sectionCard {
+  overflow: hidden;
+  border: 1px solid rgba(223, 230, 239, 0.95);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(8px);
+}
+
+.card + .card,
+.sectionCard + .sectionCard {
+  margin-top: 18px;
+}
+
+.cardHeader,
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-faint);
+}
+
+.cardHeader {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.85));
+}
+
+.sectionHead {
+  background: linear-gradient(135deg, rgba(248, 250, 252, 1), rgba(239, 246, 255, 0.95));
+}
+
+.cardHeader h2 {
+  font-size: 15px;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+
+.cardBody,
+.sectionBody {
+  padding: 18px;
+}
+
+.sectionCard,
+.questionCard,
+.userSection {
+  margin-bottom: 16px;
+}
+
+.sectionHeadLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sectionTitle,
+.userSectionTitle,
+.previewQuestion {
+  font-weight: 850;
+  letter-spacing: -0.01em;
+}
+
+.sectionTitle,
+.userSectionTitle {
+  font-size: 15px;
+}
+
+.badge,
+.pill {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: #fff;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pill {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: end;
+}
+
+.grow {
+  flex: 1;
+  min-width: 220px;
+}
+
+.buttonCell {
+  flex: 0.55;
+  min-width: 190px;
+}
+
+.selectCell {
+  flex: 0.75;
+  min-width: 240px;
+}
+
+label {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.questionLabel {
+  font-size: 14px;
+  font-weight: 750;
+  color: var(--text);
+}
+
+input[type="text"],
+select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px 14px;
+  outline: none;
+  color: var(--text);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.02);
+}
+
+input[type="text"]:focus,
+select:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.14);
+}
+
+.primaryButton,
+.dangerButton,
+.ghostButton,
+.smallButton,
+.ghostLink,
+.categoryTabButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px 13px;
+  color: var(--text);
+  text-decoration: none;
+  appearance: none;
+}
+
+.primaryButton {
+  border-color: var(--primary);
+  background: linear-gradient(180deg, #2563eb, #1d4ed8);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
+}
+
+.dangerButton {
+  border-color: var(--danger);
+  background: #dc2626;
+  color: #fff !important;
+  min-width: 88px;
+  justify-content: center;
+}
+
+.dangerButton,
+.dangerButton:hover,
+.dangerButton:focus,
+.dangerButton:visited {
+  color: #fff !important;
+  text-decoration: none !important;
+}
+
+.dangerButton.smallButton,
+.dangerButton.smallButton:hover,
+.dangerButton.smallButton:focus,
+.dangerButton.smallButton:visited {
+  background: #dc2626;
+  border-color: var(--danger);
+  color: #fff !important;
+}
+
+.ghostButton,
+.ghostLink,
+.smallButton {
+  background: #fff;
+}
+
+.smallButton {
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.primaryButton:hover,
+.dangerButton:hover,
+.smallButton:hover,
+.ghostButton:hover,
+.ghostLink:hover,
+.categoryTabButton:hover {
+  transform: translateY(-1px);
+}
+
+.topbar .ghostLink,
+.topbar .smallButton,
+.topbar .ghostButton,
+.topbar .primaryButton,
+.topbar .dangerButton {
+  border-color: var(--header-border);
+  color: #fff;
+}
+
+.topbar .ghostLink,
+.topbar .ghostButton,
+.topbar .smallButton {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.topbar .primaryButton {
+  border-color: transparent;
+}
+
+.topbar .dangerButton {
+  background: rgba(220, 38, 38, 0.9);
+  border-color: transparent;
+}
+
+.divider {
+  height: 1px;
+  margin: 16px 0;
+  background: linear-gradient(90deg, transparent, var(--border-faint), transparent);
+}
+
+.muted,
+.questionHint,
+.helperText,
+.emptyState {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.questionCard,
+.userQuestion {
+  margin-bottom: 12px;
+  border: 1px solid var(--border-faint);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(249, 250, 251, 0.96));
+  padding: 14px;
+}
+
+.questionTop,
+.optionRow,
+.checkitem,
+.subOptionRow {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.optionBlock,
+.previewRow {
+  margin-top: 12px;
+}
+
+.optionRow > input,
+.subOptionRow > input {
+  flex: 1;
+}
+
+.optionTools {
+  gap: 8px;
+}
+
+.subBox,
+.userSection,
+.categorySection,
+.categoryRow {
+  border-radius: 16px;
+  background: var(--surface-muted);
+}
+
+.subBox,
+.categorySection,
+.categoryRow {
+  margin-top: 12px;
+  border: 1px solid var(--border-faint);
+  padding: 12px;
+}
+
+.userSection {
+  border: 1px solid #dbe4f0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.95));
+  padding: 16px;
+}
+
+.subRow {
+  margin-top: 10px;
+}
+
+.checklist,
+.subchecks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.checkitem {
+  padding: 8px 0;
+}
+
+.checkitemBody,
+.follow {
+  flex: 1;
+}
+
+.follow,
+.nestedInlineWrap,
+.nestedWrap {
+  margin-top: 10px;
+  border-left: 3px solid #dbeafe;
+  padding-left: 14px;
+}
+
+.follow {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.subitem {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.subitem label,
+.checkitem label {
+  margin: 0;
+  font-weight: 600;
+}
+
+.previewRow {
+  border-bottom: 1px solid var(--border-faint);
+  padding: 12px 0;
+}
+
+.previewRow:last-child {
+  border-bottom: 0;
+}
+
+.error {
+  margin-top: 8px;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.globalError {
+  margin-top: 14px;
+  border-radius: 12px;
+  background: var(--danger-soft);
+  padding: 10px 12px;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  z-index: 99;
+  display: none;
+  max-width: calc(100% - 24px);
+  transform: translateX(-50%);
+  border-radius: 14px;
+  background: var(--header);
+  color: #fff;
+  padding: 12px 14px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.24);
+}
+
+.toast.visible {
+  display: block;
+}
+
+.categoryRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.categoryRow > input {
+  flex: 1;
+}
+
+.categorySectionHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.filterRow {
+  margin-bottom: 16px;
+}
+
+.categoryTabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.categoryTabButton {
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-weight: 700;
+}
+
+.categoryTabButton.active,
+.activeCategoryRow {
+  border-color: #93c5fd;
+  background: var(--primary-soft);
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.08);
+}
+
+.nestedDepth1 {
+  background: linear-gradient(180deg, #fdfefe, #f8fbff);
+}
+
+.nestedDepth2,
+.nestedDepth3 {
+  background: linear-gradient(180deg, #fafcff, #f5f8fd);
+}
+
+.inlineQuestion {
+  margin-top: 10px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.nestedInlineWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .topbar,
+  .cardHeader,
+  .sectionHead,
+  .questionTop,
+  .optionRow,
+  .subOptionRow,
+  .categoryRow,
+  .categorySectionHead {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .topbarActions,
+  .sectionActions,
+  .actions,
+  .optionTools {
+    width: 100%;
+  }
+
+  .shell {
+    padding: 18px 14px 32px;
+  }
+
+  .cardBody,
+  .sectionBody,
+  .userSection,
+  .questionCard,
+  .userQuestion {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+
+
+.copyToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 30px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.copyToggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.copyToggle span {
+  line-height: 1.2;
+}
