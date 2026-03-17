@@ -265,6 +265,130 @@ function QuestionEditor({
                   </div>
                 </div>
 
+                {question.type !== "subdropdown" && option.followUp === "text" ? (
+                  <div className="nestedWrap">
+                    <div className="row">
+                      <div className="selectCell">
+                        <label>Text Follow-up</label>
+                        <select
+                          value={option.followRequired ? "required" : "optional"}
+                          onChange={(event) => {
+                            const options = [...question.options];
+                            options[optionIndex] = {
+                              ...option,
+                              followRequired: event.target.value === "required",
+                            };
+                            onChange({ ...question, options });
+                          }}
+                        >
+                          <option value="optional">Optional</option>
+                          <option value="required">Required</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {question.type !== "subdropdown" && option.followUp === "subcheckbox" ? (
+                  <div className="nestedWrap">
+                    <div className="row">
+                      <div className="selectCell">
+                        <label>Sub Checkbox Mode</label>
+                        <select
+                          value={option.subRequired ? "required" : "optional"}
+                          onChange={(event) => {
+                            const options = [...question.options];
+                            options[optionIndex] = {
+                              ...option,
+                              subRequired: event.target.value === "required",
+                            };
+                            onChange({ ...question, options });
+                          }}
+                        >
+                          <option value="optional">Sub Optional</option>
+                          <option value="required">Sub Required</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="muted">Sub-checkbox options (user will tick these):</div>
+
+                    <div className="row">
+                      <div className="grow">
+                        <label>Add Sub-option</label>
+                        <input
+                          id={`${optionInputId}_${option.id}_sub`}
+                          type="text"
+                          placeholder="e.g., HR / Admin / Finance"
+                        />
+                      </div>
+                      <div className="buttonCell">
+                        <label>&nbsp;</label>
+                        <button
+                          className="primaryButton"
+                          type="button"
+                          onClick={() => {
+                            const input = document.getElementById(
+                              `${optionInputId}_${option.id}_sub`,
+                            ) as HTMLInputElement | null;
+                            const value = input?.value.trim() || "";
+                            if (!value) return;
+
+                            const options = [...question.options];
+                            options[optionIndex] = {
+                              ...option,
+                              subOptions: [...option.subOptions, { text: value }],
+                            };
+                            onChange({ ...question, options });
+
+                            if (input) input.value = "";
+                          }}
+                        >
+                          + Add
+                        </button>
+                      </div>
+                    </div>
+
+                    {option.subOptions.length ? (
+                      option.subOptions.map((subOption, subOptionIndex) => (
+                        <div className="optionRow" key={`${option.id}_sub_${subOptionIndex}`}>
+                          <input
+                            type="text"
+                            value={subOption.text}
+                            onChange={(event) => {
+                              const options = [...question.options];
+                              const subOptions = [...option.subOptions];
+                              subOptions[subOptionIndex] = { text: event.target.value };
+                              options[optionIndex] = { ...option, subOptions };
+                              onChange({ ...question, options });
+                            }}
+                          />
+                          <div className="optionTools">
+                            <button
+                              className="dangerButton smallButton"
+                              type="button"
+                              onClick={() => {
+                                const options = [...question.options];
+                                options[optionIndex] = {
+                                  ...option,
+                                  subOptions: option.subOptions.filter(
+                                    (_, index) => index !== subOptionIndex,
+                                  ),
+                                };
+                                onChange({ ...question, options });
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="muted">No sub-checkbox options yet.</div>
+                    )}
+                  </div>
+                ) : null}
+
                 {question.type === "subdropdown" ? (
                   <div className="nestedWrap">
                     <div className="categorySectionHead">
