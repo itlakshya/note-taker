@@ -4,6 +4,8 @@ import { head, put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { defaultState, normalizeState } from "@/lib/form-state";
 
+export const runtime = "nodejs";
+
 const dataDirectory = path.join(process.cwd(), "data");
 const formFilePath = path.join(dataDirectory, "form.json");
 const blobFormPath = "form/form.json";
@@ -54,18 +56,28 @@ export async function POST(request: Request) {
     );
   }
 
-  const cleaned = normalizeState(body);
+  try {
+    const cleaned = normalizeState(body);
 
-  if (hasBlobStorage()) {
-    await put(blobFormPath, JSON.stringify(cleaned, null, 2), {
-      access: "public",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      contentType: "application/json",
-    });
-  } else {
-    await mkdir(dataDirectory, { recursive: true });
-    await writeFile(formFilePath, JSON.stringify(cleaned, null, 2), "utf8");
+    if (hasBlobStorage()) {
+      await put(blobFormPath, JSON.stringify(cleaned, null, 2), {
+        access: "public",
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        contentType: "application/json",
+      });
+    } else {
+      await mkdir(dataDirectory, { recursive: true });
+      await writeFile(formFilePath, JSON.stringify(cleaned, null, 2), "utf8");
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unexpected save error";
+
+    return NextResponse.json(
+      { ok: false, message },
+      { status: 500, headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   return NextResponse.json(
