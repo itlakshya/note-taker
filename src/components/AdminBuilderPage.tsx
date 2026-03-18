@@ -7,6 +7,7 @@ import {
   type FollowUpType,
   type FormState,
   type Option,
+  type OptionInputType,
   type Question,
   type QuestionType,
 } from "@/lib/form-state";
@@ -57,10 +58,11 @@ function blankQuestion(type: QuestionType, blankLabel = false): Question {
   };
 }
 
-function blankOption(text: string): Option {
+function blankOption(text: string, inputType: OptionInputType): Option {
   return {
     id: uid(),
     text,
+    inputType,
     followUp: smartDefaultFollowUp(text) as FollowUpType,
     followRequired: false,
     subRequired: false,
@@ -187,6 +189,15 @@ function QuestionEditor({
               <label>{question.type === "subdropdown" ? "Add Sub Option" : "Add Option"}</label>
               <input id={optionInputId} type="text" placeholder={question.type === "subdropdown" ? "e.g., 1-10 / 11-20" : "e.g., Option A"} />
             </div>
+            {question.type !== "subdropdown" ? (
+              <div className="selectCell">
+                <label>Option Type</label>
+                <select id={`${optionInputId}__type`} defaultValue={question.type === "dropdown" ? "dropdown" : "checkbox"}>
+                  <option value="checkbox">Checkbox</option>
+                  <option value="dropdown">Dropdown</option>
+                </select>
+              </div>
+            ) : null}
             <div className="buttonCell">
               <label>&nbsp;</label>
               <button
@@ -196,7 +207,10 @@ function QuestionEditor({
                   const input = document.getElementById(optionInputId) as HTMLInputElement | null;
                   const value = input?.value.trim() || "";
                   if (!value) return;
-                  onChange({ ...question, options: [...question.options, blankOption(value)] });
+                  const optionType = question.type === "subdropdown"
+                    ? "checkbox"
+                    : ((document.getElementById(`${optionInputId}__type`) as HTMLSelectElement | null)?.value === "dropdown" ? "dropdown" : "checkbox");
+                  onChange({ ...question, options: [...question.options, blankOption(value, optionType)] });
                   if (input) input.value = "";
                 }}
               >
@@ -220,21 +234,38 @@ function QuestionEditor({
                   />
                   <div className="optionTools">
                     {question.type !== "subdropdown" ? (
-                      <select
-                        value={option.followUp}
-                        onChange={(event) => {
-                          const options = [...question.options];
-                          options[optionIndex] = {
-                            ...option,
-                            followUp: event.target.value as FollowUpType,
-                          };
-                          onChange({ ...question, options });
-                        }}
-                      >
-                        <option value="none">No follow-up</option>
-                        <option value="text">Text box</option>
-                        <option value="subcheckbox">Sub-checkboxes</option>
-                      </select>
+                      <>
+                        <select
+                          value={option.inputType}
+                          onChange={(event) => {
+                            const options = [...question.options];
+                            options[optionIndex] = {
+                              ...option,
+                              inputType: event.target.value as OptionInputType,
+                            };
+                            onChange({ ...question, options });
+                          }}
+                        >
+                          <option value="checkbox">Checkbox</option>
+                          <option value="dropdown">Dropdown</option>
+                        </select>
+                        <select
+                          value={option.followUp}
+                          onChange={(event) => {
+                            const options = [...question.options];
+                            options[optionIndex] = {
+                              ...option,
+                              followUp: event.target.value as FollowUpType,
+                            };
+                            onChange({ ...question, options });
+                          }}
+                        >
+                          <option value="none">No follow-up</option>
+                          <option value="text">Text box</option>
+                          <option value="subcheckbox">Sub-checkboxes</option>
+                          <option value="subdropdown">Sub-dropdown</option>
+                        </select>
+                      </>
                     ) : (
                       <span className="muted">Sub option</span>
                     )}
@@ -385,6 +416,106 @@ function QuestionEditor({
                       ))
                     ) : (
                       <div className="muted">No sub-checkbox options yet.</div>
+                    )}
+                  </div>
+                ) : null}
+
+                {question.type !== "subdropdown" && option.followUp === "subdropdown" ? (
+                  <div className="nestedWrap">
+                    <div className="row">
+                      <div className="selectCell">
+                        <label>Sub Dropdown Mode</label>
+                        <select
+                          value={option.subRequired ? "required" : "optional"}
+                          onChange={(event) => {
+                            const options = [...question.options];
+                            options[optionIndex] = {
+                              ...option,
+                              subRequired: event.target.value === "required",
+                            };
+                            onChange({ ...question, options });
+                          }}
+                        >
+                          <option value="optional">Sub Optional</option>
+                          <option value="required">Sub Required</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="muted">Sub-dropdown options (user will select one):</div>
+
+                    <div className="row">
+                      <div className="grow">
+                        <label>Add Sub-option</label>
+                        <input
+                          id={`${optionInputId}_${option.id}_subdropdown`}
+                          type="text"
+                          placeholder="e.g., Diploma / UG / PG"
+                        />
+                      </div>
+                      <div className="buttonCell">
+                        <label>&nbsp;</label>
+                        <button
+                          className="primaryButton"
+                          type="button"
+                          onClick={() => {
+                            const input = document.getElementById(
+                              `${optionInputId}_${option.id}_subdropdown`,
+                            ) as HTMLInputElement | null;
+                            const value = input?.value.trim() || "";
+                            if (!value) return;
+
+                            const options = [...question.options];
+                            options[optionIndex] = {
+                              ...option,
+                              subOptions: [...option.subOptions, { text: value }],
+                            };
+                            onChange({ ...question, options });
+
+                            if (input) input.value = "";
+                          }}
+                        >
+                          + Add
+                        </button>
+                      </div>
+                    </div>
+
+                    {option.subOptions.length ? (
+                      option.subOptions.map((subOption, subOptionIndex) => (
+                        <div className="optionRow" key={`${option.id}_subdropdown_${subOptionIndex}`}>
+                          <input
+                            type="text"
+                            value={subOption.text}
+                            onChange={(event) => {
+                              const options = [...question.options];
+                              const subOptions = [...option.subOptions];
+                              subOptions[subOptionIndex] = { text: event.target.value };
+                              options[optionIndex] = { ...option, subOptions };
+                              onChange({ ...question, options });
+                            }}
+                          />
+                          <div className="optionTools">
+                            <button
+                              className="dangerButton smallButton"
+                              type="button"
+                              onClick={() => {
+                                const options = [...question.options];
+                                options[optionIndex] = {
+                                  ...option,
+                                  subOptions: option.subOptions.filter(
+                                    (_, index) => index !== subOptionIndex,
+                                  ),
+                                };
+                                onChange({ ...question, options });
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="muted">No sub-dropdown options yet.</div>
                     )}
                   </div>
                 ) : null}

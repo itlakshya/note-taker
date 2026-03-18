@@ -1,4 +1,70 @@
 {
-  "categories": [],
-  "sections": []
+  "categories": [
+    {
+      "id": "e8dfe997e4bdb19cff43651d",
+      "name": "12"
+    }
+  ],
+  "sections": [
+    {
+      "id": "d53306efc30f819cff4df0bb",
+      "title": "test",
+      "categoryQuestions": [
+        {
+          "categoryId": "e8dfe997e4bdb19cff43651d",
+          "questions": [
+            {
+              "id": "ee81338578db919cff4e062e",
+              "type": "dropdown",
+              "label": "this is a test for dropdown and checkbox",
+              "required": false,
+              "includeInCopy": true,
+              "options": [
+                {
+                  "id": "bb2987a16f724819cff4e3fab",
+                  "text": "test",
+                  "inputType": "dropdown",
+                  "followUp": "none",
+                  "followRequired": false,
+                  "subRequired": false,
+                  "subOptions": [],
+                  "childQuestions": []
+                },
+                {
+                  "id": "a2dae573856ac19cff4e5895",
+                  "text": "hai",
+                  "inputType": "dropdown",
+                  "followUp": "subcheckbox",
+                  "followRequired": false,
+                  "subRequired": true,
+                  "subOptions": [
+                    {
+                      "text": "1"
+                    },
+                    {
+                      "text": "2"
+                    },
+                    {
+                      "text": "3"
+                    }
+                  ],
+                  "childQuestions": []
+                },
+                {
+                  "id": "cd2affcaf96f419cff4e7024",
+                  "text": "hello",
+                  "inputType": "checkbox",
+                  "followUp": "none",
+                  "followRequired": false,
+                  "subRequired": false,
+                  "subOptions": [],
+                  "childQuestions": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }

@@ -1,5 +1,6 @@
-export type FollowUpType = "none" | "text" | "subcheckbox";
+export type FollowUpType = "none" | "text" | "subcheckbox" | "subdropdown";
 export type QuestionType = "text" | "dropdown" | "checkbox" | "subdropdown";
+export type OptionInputType = "checkbox" | "dropdown";
 
 export type SubOption = {
   text: string;
@@ -8,6 +9,7 @@ export type SubOption = {
 export type Option = {
   id: string;
   text: string;
+  inputType: OptionInputType;
   followUp: FollowUpType;
   followRequired: boolean;
   subRequired: boolean;
@@ -87,8 +89,11 @@ function normalizeQuestion(value: unknown): Question {
       return {
         id: String(optionRecord.id ?? ""),
         text: String(optionRecord.text ?? ""),
+        inputType: optionRecord.inputType === "dropdown" ? "dropdown" : "checkbox",
         followUp:
-          optionRecord.followUp === "text" || optionRecord.followUp === "subcheckbox"
+          optionRecord.followUp === "text" ||
+          optionRecord.followUp === "subcheckbox" ||
+          optionRecord.followUp === "subdropdown"
             ? optionRecord.followUp
             : "none",
         followRequired: Boolean(optionRecord.followRequired),

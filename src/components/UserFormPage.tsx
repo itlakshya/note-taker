@@ -106,6 +106,33 @@ export default function UserFormPage() {
     return selected;
   }
 
+  function getSubDropdownValue(id: string) {
+    const select = document.getElementById(id) as HTMLSelectElement | null;
+    return select?.value || "";
+  }
+
+  function formatOptionAnswer(questionPath: string, option: Option) {
+    const baseField = fieldKey(selectedCategoryId, questionPath);
+
+    if (option.followUp === "text") {
+      const follow = document.getElementById(`${baseField}__f_${option.id}`) as HTMLInputElement | null;
+      const value = follow?.value.trim() || "";
+      return value ? `${option.text}: ${value}` : option.text;
+    }
+
+    if (option.followUp === "subcheckbox") {
+      const values = collectSubCheckboxValues(`${baseField}__sub_${option.id}`);
+      return values.length ? `${option.text}: ${values.join(", ")}` : option.text;
+    }
+
+    if (option.followUp === "subdropdown") {
+      const value = getSubDropdownValue(`${baseField}__sd_${option.id}`);
+      return value ? `${option.text}: ${value}` : option.text;
+    }
+
+    return option.text;
+  }
+
   function validateQuestion(sectionTitle: string, question: Question, path: string, answers: Answer[]) {
     const field = fieldKey(selectedCategoryId, path);
     const errors: string[] = [];
@@ -118,11 +145,11 @@ export default function UserFormPage() {
       return errors;
     }
 
-    if (question.type === "dropdown" || question.type === "subdropdown") {
+    if (question.type === "subdropdown") {
       const select = document.getElementById(field) as HTMLSelectElement | null;
       const option = question.options.find((item) => String(item.id) === String(select?.value));
       if (question.required && !option) errors.push(field);
-      answers.push({ section: sectionTitle, question: isPlaceholderLabel(question.label) ? "" : question.label, answer: getAnswerText(option?.text || ""), includeInCopy: question.includeInCopy });
+      answers.push({ section: sectionTitle, question: isPlaceholderLabel(question.label) ? "" : question.label, answer: getAnswerText(option ? formatOptionAnswer(path, option) : ""), includeInCopy: question.includeInCopy });
 
       if (option?.followUp === "text") {
         const follow = document.getElementById(`${field}__f_${option.id}`) as HTMLInputElement | null;
@@ -134,7 +161,12 @@ export default function UserFormPage() {
         if (option.subRequired && !values.length) errors.push(field);
       }
 
-      if (question.type === "subdropdown" && option) {
+      if (option?.followUp === "subdropdown") {
+        const value = getSubDropdownValue(`${field}__sd_${option.id}`);
+        if (option.subRequired && !value) errors.push(field);
+      }
+
+      if (option) {
         option.childQuestions.forEach((childQuestion) => {
           errors.push(...validateQuestion(sectionTitle, childQuestion, `${path}__${option.id}__${childQuestion.id}`, answers));
         });
@@ -143,14 +175,40 @@ export default function UserFormPage() {
       return errors;
     }
 
+    const checkboxOptions = question.options.filter((option) => option.inputType !== "dropdown");
+    const dropdownOptions = question.options.filter((option) => option.inputType === "dropdown");
     const selectedIds: string[] = [];
-    const boxes = document.querySelectorAll<HTMLInputElement>(`input[type="checkbox"][name="${CSS.escape(field)}"]`);
+    const boxes = document.querySelectorAll<HTMLInputElement>(`input[type="checkbox"][name="${CSS.escape(`${field}__check`)}"]`);
     boxes.forEach((box) => {
       if (box.checked) selectedIds.push(box.value);
     });
-    const selectedOptions = question.options.filter((option) => selectedIds.includes(option.id));
+    const selectedCheckboxOptions = checkboxOptions.filter((option) => selectedIds.includes(option.id));
+    const dropdownValue = getSubDropdownValue(`${field}__dropdown`);
+    const selectedDropdownOption = dropdownOptions.find((option) => option.id === dropdownValue);
+    const selectedOptions = selectedDropdownOption
+      ? [...selectedCheckboxOptions, selectedDropdownOption]
+      : selectedCheckboxOptions;
+
     if (question.required && !selectedOptions.length) errors.push(field);
-    answers.push({ section: sectionTitle, question: isPlaceholderLabel(question.label) ? "" : question.label, answer: getAnswerText(selectedOptions.map((option) => option.text)), includeInCopy: question.includeInCopy });
+
+    selectedOptions.forEach((option) => {
+      if (option.followUp === "text") {
+        const follow = document.getElementById(`${field}__f_${option.id}`) as HTMLInputElement | null;
+        if (option.followRequired && !(follow?.value.trim() || "")) errors.push(field);
+      }
+
+      if (option.followUp === "subcheckbox") {
+        const values = collectSubCheckboxValues(`${field}__sub_${option.id}`);
+        if (option.subRequired && !values.length) errors.push(field);
+      }
+
+      if (option.followUp === "subdropdown") {
+        const value = getSubDropdownValue(`${field}__sd_${option.id}`);
+        if (option.subRequired && !value) errors.push(field);
+      }
+    });
+
+    answers.push({ section: sectionTitle, question: isPlaceholderLabel(question.label) ? "" : question.label, answer: getAnswerText(selectedOptions.map((option) => formatOptionAnswer(path, option))), includeInCopy: question.includeInCopy });
     return errors;
   }
 
@@ -200,6 +258,9 @@ export default function UserFormPage() {
     if (option.followUp === "text") {
       return <div className="follow"><label className="questionLabel">Please specify:</label><input id={`${fieldKey(selectedCategoryId, questionPath)}__f_${option.id}`} type="text" /></div>;
     }
+    if (option.followUp === "subdropdown") {
+      return <div className="follow"><label className="questionLabel">Select one:</label><select id={`${fieldKey(selectedCategoryId, questionPath)}__sd_${option.id}`} defaultValue=""><option value="">Select...</option>{option.subOptions.map((subOption, index) => <option key={`${option.id}_sd_${index}`} value={subOption.text}>{subOption.text}</option>)}</select></div>;
+    }
     return <div className="follow"><div className="muted">Select all that apply:</div><div className="subchecks">{option.subOptions.map((subOption, index) => { const id = `${fieldKey(selectedCategoryId, questionPath)}__sub_${option.id}_${index}`; return <div className="subitem" key={id}><input type="checkbox" id={id} name={`${fieldKey(selectedCategoryId, questionPath)}__sub_${option.id}`} value={subOption.text} /><label htmlFor={id}>{subOption.text}</label></div>; })}</div></div>;
   }
 
@@ -212,12 +273,26 @@ export default function UserFormPage() {
       return <div className={inline ? "inlineQuestion" : "userQuestion"} key={path}>{showLabel ? <label className="questionLabel" htmlFor={field}>{question.label}{question.required ? " *" : ""}</label> : null}{hasError ? <div className="error">This field is required.</div> : null}<input id={field} type="text" /></div>;
     }
 
-    if (question.type === "dropdown" || question.type === "subdropdown") {
+    if (question.type === "subdropdown") {
       const selectedOption = question.options.find((option) => option.id === dropdownSelections[field]);
-      return <div className={inline ? "inlineQuestion" : "userQuestion"} key={path}>{showLabel ? <label className="questionLabel" htmlFor={field}>{question.label}{question.required ? " *" : ""}</label> : null}{hasError ? <div className="error">This field is required.</div> : null}<select id={field} defaultValue="" onChange={(event) => setDropdownSelections((current) => ({ ...current, [field]: event.target.value }))}><option value="">{question.type === "subdropdown" ? "Select sub option..." : "Select..."}</option>{question.options.map((option) => <option key={option.id} value={option.id}>{option.text || "Option"}</option>)}</select>{renderFollowUp(path, selectedOption)}{question.type === "subdropdown" && selectedOption?.childQuestions.length ? <div className="nestedInlineWrap">{selectedOption.childQuestions.map((childQuestion) => renderQuestion(childQuestion, `${path}__${selectedOption.id}__${childQuestion.id}`, true))}</div> : null}</div>;
+      return <div className={inline ? "inlineQuestion" : "userQuestion"} key={path}>{showLabel ? <label className="questionLabel" htmlFor={field}>{question.label}{question.required ? " *" : ""}</label> : null}{hasError ? <div className="error">This field is required.</div> : null}<select id={field} defaultValue="" onChange={(event) => setDropdownSelections((current) => ({ ...current, [field]: event.target.value }))}><option value="">Select sub option...</option>{question.options.map((option) => <option key={option.id} value={option.id}>{option.text || "Option"}</option>)}</select>{renderFollowUp(path, selectedOption)}{selectedOption?.childQuestions.length ? <div className="nestedInlineWrap">{selectedOption.childQuestions.map((childQuestion) => renderQuestion(childQuestion, `${path}__${selectedOption.id}__${childQuestion.id}`, true))}</div> : null}</div>;
     }
 
-    return <div className={inline ? "inlineQuestion" : "userQuestion"} key={path}>{showLabel ? <label className="questionLabel" htmlFor={field}>{question.label}{question.required ? " *" : ""}</label> : null}{hasError ? <div className="error">This field is required.</div> : null}<div className="checklist">{question.options.map((option, index) => { const checkboxId = `${field}_${index}`; return <div className="checkitem" key={checkboxId}><input type="checkbox" id={checkboxId} name={field} value={option.id} onChange={(event) => setCheckedOptions((current) => ({ ...current, [checkboxId]: event.target.checked }))} /><div className="checkitemBody"><label htmlFor={checkboxId}>{option.text || "Option"}</label>{checkedOptions[checkboxId] ? renderFollowUp(path, option) : null}</div></div>; })}</div></div>;
+    const checkboxOptions = question.options.filter((option) => option.inputType !== "dropdown");
+    const dropdownOptions = question.options.filter((option) => option.inputType === "dropdown");
+    const selectedDropdownOption = dropdownOptions.find((option) => option.id === dropdownSelections[`${field}__dropdown`]);
+    let dropdownRendered = false;
+
+    return <div className={inline ? "inlineQuestion" : "userQuestion"} key={path}>{showLabel ? <label className="questionLabel" htmlFor={field}>{question.label}{question.required ? " *" : ""}</label> : null}{hasError ? <div className="error">This field is required.</div> : null}<div className="checklist" id={field}>{question.options.map((option, index) => {
+      if (option.inputType === "dropdown") {
+        if (dropdownRendered) return null;
+        dropdownRendered = true;
+        return <div className="follow" key={`${field}_dropdown_group`}><select id={`${field}__dropdown`} defaultValue="" onChange={(event) => setDropdownSelections((current) => ({ ...current, [`${field}__dropdown`]: event.target.value }))}><option value="">Select...</option>{dropdownOptions.map((dropdownOption) => <option key={dropdownOption.id} value={dropdownOption.id}>{dropdownOption.text || "Option"}</option>)}</select>{renderFollowUp(path, selectedDropdownOption)}</div>;
+      }
+
+      const checkboxId = `${field}_check_${index}`;
+      return <div className="checkitem" key={checkboxId}><input type="checkbox" id={checkboxId} name={`${field}__check`} value={option.id} onChange={(event) => setCheckedOptions((current) => ({ ...current, [checkboxId]: event.target.checked }))} /><div className="checkitemBody"><label htmlFor={checkboxId}>{option.text || "Option"}</label>{checkedOptions[checkboxId] ? renderFollowUp(path, option) : null}</div></div>;
+    })}</div></div>;
   }
 
   if (loading) return <main className="shell"><section className="card"><div className="cardBody"><p className="muted">Loading form...</p></div></section></main>;
