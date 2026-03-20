@@ -72,6 +72,7 @@ export default function UserFormPage() {
   const [globalError, setGlobalError] = useState("");
   const [dropdownSelections, setDropdownSelections] = useState<Record<string, string>>({});
   const [checkedOptions, setCheckedOptions] = useState<Record<string, boolean>>({});
+  const [generalQuestionToggles, setGeneralQuestionToggles] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let active = true;
@@ -152,6 +153,11 @@ export default function UserFormPage() {
   function validateQuestion(sectionTitle: string, question: Question, path: string, answers: Answer[]) {
     const field = fieldKey(scopeKey(selectedCategoryId, path), path);
     const errors: string[] = [];
+    const isGeneralToggleQuestion = path.startsWith("general__") && question.type !== "text";
+
+    if (isGeneralToggleQuestion && !generalQuestionToggles[field]) {
+      return errors;
+    }
 
     if (question.type === "text") {
       const input = document.getElementById(field) as HTMLInputElement | null;
@@ -297,14 +303,18 @@ export default function UserFormPage() {
     const field = fieldKey(scopeKey(selectedCategoryId, path), path);
     const hasError = fieldErrors.includes(field);
     const showLabel = !inline && question.type != "subdropdown" && Boolean(question.label);
+    const isGeneralToggleQuestion = path.startsWith("general__") && question.type !== "text";
+    const isEnabled = !isGeneralToggleQuestion || Boolean(generalQuestionToggles[field]);
 
     if (question.type === "text") {
       return <div className={inline ? "inlineQuestion" : "userQuestion"} key={path}>{showLabel ? <label className="questionLabel" htmlFor={field}>{question.label}{question.required ? " *" : ""}</label> : null}{hasError ? <div className="error">This field is required.</div> : null}<input id={field} type="text" /></div>;
     }
 
+    const toggleControl = isGeneralToggleQuestion ? <div className="checkitem"><input type="checkbox" id={`${field}__toggle`} checked={Boolean(generalQuestionToggles[field])} onChange={(event) => setGeneralQuestionToggles((current) => ({ ...current, [field]: event.target.checked }))} /><div className="checkitemBody"><label htmlFor={`${field}__toggle`}>{question.label || "Question"}</label></div></div> : null;
+
     if (question.type === "subdropdown") {
       const selectedOption = question.options.find((option) => option.id === dropdownSelections[field]);
-      return <div className={inline ? "inlineQuestion" : "userQuestion"} key={path}>{showLabel ? <label className="questionLabel" htmlFor={field}>{question.label}{question.required ? " *" : ""}</label> : null}{hasError ? <div className="error">This field is required.</div> : null}<select id={field} defaultValue="" onChange={(event) => setDropdownSelections((current) => ({ ...current, [field]: event.target.value }))}><option value="">Select sub option...</option>{question.options.map((option) => <option key={option.id} value={option.id}>{option.text || "Option"}</option>)}</select>{renderFollowUp(path, selectedOption)}{selectedOption?.childQuestions.length ? <div className="nestedInlineWrap">{selectedOption.childQuestions.map((childQuestion) => renderQuestion(childQuestion, `${path}__${selectedOption.id}__${childQuestion.id}`, true))}</div> : null}</div>;
+      return <div className={inline ? "inlineQuestion" : "userQuestion"} key={path}>{toggleControl}{!isGeneralToggleQuestion && showLabel ? <label className="questionLabel" htmlFor={field}>{question.label}{question.required ? " *" : ""}</label> : null}{hasError ? <div className="error">This field is required.</div> : null}{isEnabled ? <><select id={field} defaultValue="" onChange={(event) => setDropdownSelections((current) => ({ ...current, [field]: event.target.value }))}><option value="">Select sub option...</option>{question.options.map((option) => <option key={option.id} value={option.id}>{option.text || "Option"}</option>)}</select>{renderFollowUp(path, selectedOption)}{selectedOption?.childQuestions.length ? <div className="nestedInlineWrap">{selectedOption.childQuestions.map((childQuestion) => renderQuestion(childQuestion, `${path}__${selectedOption.id}__${childQuestion.id}`, true))}</div> : null}</> : null}</div>;
     }
 
     const checkboxOptions = question.options.filter((option) => option.inputType !== "dropdown");
@@ -312,7 +322,7 @@ export default function UserFormPage() {
     const selectedDropdownOption = dropdownOptions.find((option) => option.id === dropdownSelections[`${field}__dropdown`]);
     let dropdownRendered = false;
 
-    return <div className={inline ? "inlineQuestion" : "userQuestion"} key={path}>{showLabel ? <label className="questionLabel" htmlFor={field}>{question.label}{question.required ? " *" : ""}</label> : null}{hasError ? <div className="error">This field is required.</div> : null}<div className="checklist" id={field}>{question.options.map((option, index) => {
+    return <div className={inline ? "inlineQuestion" : "userQuestion"} key={path}>{toggleControl}{!isGeneralToggleQuestion && showLabel ? <label className="questionLabel" htmlFor={field}>{question.label}{question.required ? " *" : ""}</label> : null}{hasError ? <div className="error">This field is required.</div> : null}{isEnabled ? <div className="checklist" id={field}>{question.options.map((option, index) => {
       if (option.inputType === "dropdown") {
         if (dropdownRendered) return null;
         dropdownRendered = true;
@@ -321,7 +331,7 @@ export default function UserFormPage() {
 
       const checkboxId = `${field}_check_${index}`;
       return <div className="checkitem" key={checkboxId}><input type="checkbox" id={checkboxId} name={`${field}__check`} value={option.id} onChange={(event) => setCheckedOptions((current) => ({ ...current, [checkboxId]: event.target.checked }))} /><div className="checkitemBody"><label htmlFor={checkboxId}>{option.text || "Option"}</label>{checkedOptions[checkboxId] ? renderFollowUp(path, option) : null}</div></div>;
-    })}</div></div>;
+    })}</div> : null}</div>;
   }
 
   if (loading) return <main className="shell"><section className="card"><div className="cardBody"><p className="muted">Loading form...</p></div></section></main>;
