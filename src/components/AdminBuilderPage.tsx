@@ -12,6 +12,8 @@ import {
   type QuestionType,
 } from "@/lib/form-state";
 
+const GENERAL_SCOPE_ID = "__general__";
+
 function uid() {
   return Math.random().toString(16).slice(2) + Date.now().toString(16);
 }
@@ -621,7 +623,7 @@ export default function AdminBuilderPage() {
       .then((data) => {
         if (!active) return;
         setState(data);
-        setActiveCategoryId(data.categories[0]?.id || "");
+        setActiveCategoryId(GENERAL_SCOPE_ID);
         setLoading(false);
       })
       .catch(() => {
@@ -635,14 +637,13 @@ export default function AdminBuilderPage() {
   }, []);
 
   useEffect(() => {
-    if (!state.categories.length) {
-      if (activeCategoryId) setActiveCategoryId("");
+    if (activeCategoryId === GENERAL_SCOPE_ID) {
       return;
     }
 
     const exists = state.categories.some((category) => category.id === activeCategoryId);
     if (!exists) {
-      setActiveCategoryId(state.categories[0].id);
+      setActiveCategoryId(GENERAL_SCOPE_ID);
     }
   }, [activeCategoryId, state.categories]);
 
@@ -658,11 +659,20 @@ export default function AdminBuilderPage() {
     return next.sections[sectionIndex].categoryQuestions.find((group) => group.categoryId === categoryId);
   }
 
+  function getQuestionList(next: FormState, sectionIndex: number, scopeId: string) {
+    if (scopeId === GENERAL_SCOPE_ID) {
+      return next.sections[sectionIndex].generalQuestions;
+    }
+
+    return getBucket(next, sectionIndex, scopeId)?.questions ?? [];
+  }
+
   if (loading) {
     return <main className="shell"><section className="card"><div className="cardBody"><p className="muted">Loading builder...</p></div></section></main>;
   }
 
   const activeCategory = state.categories.find((category) => category.id === activeCategoryId);
+  const activeScopeLabel = activeCategoryId === GENERAL_SCOPE_ID ? "General" : (activeCategory?.name || "No category");
 
   return (
     <>
@@ -695,7 +705,7 @@ export default function AdminBuilderPage() {
                   patch((next) => {
                     next.categories.push({ id: categoryId, name });
                     next.sections.forEach((section) => {
-                      section.categoryQuestions.push({ categoryId, questions: [] });
+                      section.categoryQuestions.push({ categoryId, title: section.title || section.generalTitle || "", questions: [] });
                     });
                   });
                   setActiveCategoryId(categoryId);
@@ -717,7 +727,7 @@ export default function AdminBuilderPage() {
                       next.categories.splice(categoryIndex + 1, 0, { id: duplicateId, name: `${sourceCategory.name} Copy` });
                       next.sections.forEach((section) => {
                         const sourceGroup = section.categoryQuestions.find((group) => group.categoryId === sourceCategory.id);
-                        section.categoryQuestions.push({ categoryId: duplicateId, questions: cloneQuestions(sourceGroup?.questions ?? []) });
+                        section.categoryQuestions.push({ categoryId: duplicateId, title: sourceGroup?.title || section.title || section.generalTitle || "", questions: cloneQuestions(sourceGroup?.questions ?? []) });
                       });
                     });
                     setActiveCategoryId(duplicateId);
@@ -757,7 +767,7 @@ export default function AdminBuilderPage() {
                   const title = sectionName.trim();
                   if (!title) return;
                   patch((next) => {
-                    next.sections.push({ id: uid(), title, categoryQuestions: next.categories.map((category) => ({ categoryId: category.id, questions: [] })) });
+                    next.sections.push({ id: uid(), title, generalTitle: title, generalQuestions: [], categoryQuestions: next.categories.map((category) => ({ categoryId: category.id, title, questions: [] })) });
                   });
                   setSectionName("");
                 }}>+ Add Section</button>
@@ -766,18 +776,18 @@ export default function AdminBuilderPage() {
 
             <div className="divider" />
 
-            {activeCategory ? <div className="categoryTabs">{state.categories.map((category) => <button key={category.id} className={`categoryTabButton${activeCategoryId === category.id ? " active" : ""}`} type="button" onClick={() => setActiveCategoryId(category.id)}>{category.name}</button>)}</div> : null}
+            <div className="categoryTabs"><button className={`categoryTabButton${activeCategoryId === GENERAL_SCOPE_ID ? " active" : ""}`} type="button" onClick={() => setActiveCategoryId(GENERAL_SCOPE_ID)}>General</button>{state.categories.map((category) => <button key={category.id} className={`categoryTabButton${activeCategoryId === category.id ? " active" : ""}`} type="button" onClick={() => setActiveCategoryId(category.id)}>{category.name}</button>)}</div>
 
             <div className="divider" />
 
             {state.sections.length ? state.sections.map((section, sectionIndex) => {
-              const questions = activeCategory ? getBucket(state, sectionIndex, activeCategory.id)?.questions ?? [] : [];
+              const questions = getQuestionList(state, sectionIndex, activeCategoryId);
               return (
                 <div className="sectionCard" key={section.id}>
                   <div className="sectionHead">
                     <div className="sectionHeadLeft">
-                      <div className="sectionTitle">{section.title || "Untitled Section"}</div>
-                      <div className="badge">{activeCategory?.name || "No category"}</div>
+                      <div className="sectionTitle">{activeCategoryId === GENERAL_SCOPE_ID ? (section.generalTitle || section.title || "Untitled Section") : (getBucket(state, sectionIndex, activeCategoryId)?.title || section.title || section.generalTitle || "Untitled Section")}</div>
+                      <div className="badge">{activeScopeLabel}</div>
                     </div>
                     <div className="sectionActions">
                       <button className="smallButton" type="button" onClick={() => patch((next) => { next.sections = moveItem(next.sections, sectionIndex, -1); })}>Up</button>
@@ -789,21 +799,21 @@ export default function AdminBuilderPage() {
                     <div className="row">
                       <div className="grow">
                         <label>Section Title</label>
-                        <input type="text" value={section.title} onChange={(event) => patch((next) => { next.sections[sectionIndex].title = event.target.value; })} />
+                        <input type="text" value={activeCategoryId === GENERAL_SCOPE_ID ? (section.generalTitle || section.title) : (getBucket(state, sectionIndex, activeCategoryId)?.title || section.title || section.generalTitle)} onChange={(event) => patch((next) => { if (activeCategoryId === GENERAL_SCOPE_ID) { next.sections[sectionIndex].generalTitle = event.target.value; } else { const bucket = getBucket(next, sectionIndex, activeCategoryId); if (bucket) bucket.title = event.target.value; } })} />
                       </div>
-                      {activeCategory ? <div className="selectCell"><label>Add Question Type</label><select defaultValue="" onChange={(event) => {
+                      <div className="selectCell"><label>Add Question Type</label><select defaultValue="" onChange={(event) => {
                         const value = event.target.value as QuestionType | "";
                         if (!value) return;
                         patch((next) => {
-                          getBucket(next, sectionIndex, activeCategory.id)?.questions.push(blankQuestion(value, value === "subdropdown"));
+                          getQuestionList(next, sectionIndex, activeCategoryId).push(blankQuestion(value, value === "subdropdown"));
                         });
                         event.target.value = "";
-                      }}><option value="">Choose...</option><option value="text">Text</option><option value="dropdown">Dropdown</option><option value="checkbox">Checkbox</option><option value="subdropdown">Sub dropdown</option></select></div> : null}
+                      }}><option value="">Choose...</option><option value="text">Text</option><option value="dropdown">Dropdown</option><option value="checkbox">Checkbox</option><option value="subdropdown">Sub dropdown</option></select></div>
                     </div>
 
                     <div className="divider" />
 
-                    {activeCategory ? (questions.length ? questions.map((question, questionIndex) => <QuestionEditor key={question.id} question={question} optionInputId={`opt_${section.id}_${question.id}`} onChange={(nextQuestion) => patch((next) => { const bucket = getBucket(next, sectionIndex, activeCategory.id); if (bucket) bucket.questions[questionIndex] = nextQuestion; })} onDelete={() => patch((next) => { getBucket(next, sectionIndex, activeCategory.id)?.questions.splice(questionIndex, 1); })} onMoveUp={() => patch((next) => { const bucket = getBucket(next, sectionIndex, activeCategory.id); if (bucket) bucket.questions = moveItem(bucket.questions, questionIndex, -1); })} onMoveDown={() => patch((next) => { const bucket = getBucket(next, sectionIndex, activeCategory.id); if (bucket) bucket.questions = moveItem(bucket.questions, questionIndex, 1); })} />) : <div className="muted">No questions for this category in this section.</div>) : <div className="muted">Add a category first.</div>}
+                    {questions.length ? questions.map((question, questionIndex) => <QuestionEditor key={question.id} question={question} optionInputId={`opt_${section.id}_${question.id}`} onChange={(nextQuestion) => patch((next) => { if (activeCategoryId === GENERAL_SCOPE_ID) { next.sections[sectionIndex].generalQuestions[questionIndex] = nextQuestion; } else { const bucket = getBucket(next, sectionIndex, activeCategoryId); if (bucket) bucket.questions[questionIndex] = nextQuestion; } })} onDelete={() => patch((next) => { if (activeCategoryId === GENERAL_SCOPE_ID) { next.sections[sectionIndex].generalQuestions.splice(questionIndex, 1); } else { getBucket(next, sectionIndex, activeCategoryId)?.questions.splice(questionIndex, 1); } })} onMoveUp={() => patch((next) => { if (activeCategoryId === GENERAL_SCOPE_ID) { next.sections[sectionIndex].generalQuestions = moveItem(next.sections[sectionIndex].generalQuestions, questionIndex, -1); } else { const bucket = getBucket(next, sectionIndex, activeCategoryId); if (bucket) bucket.questions = moveItem(bucket.questions, questionIndex, -1); } })} onMoveDown={() => patch((next) => { if (activeCategoryId === GENERAL_SCOPE_ID) { next.sections[sectionIndex].generalQuestions = moveItem(next.sections[sectionIndex].generalQuestions, questionIndex, 1); } else { const bucket = getBucket(next, sectionIndex, activeCategoryId); if (bucket) bucket.questions = moveItem(bucket.questions, questionIndex, 1); } })} />) : <div className="muted">No questions in this scope for this section.</div>}
                   </div>
                 </div>
               );

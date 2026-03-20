@@ -33,12 +33,15 @@ export type Category = {
 
 export type CategoryQuestionGroup = {
   categoryId: string;
+  title: string;
   questions: Question[];
 };
 
 export type Section = {
   id: string;
   title: string;
+  generalTitle: string;
+  generalQuestions: Question[];
   categoryQuestions: CategoryQuestionGroup[];
 };
 
@@ -115,6 +118,18 @@ export function getQuestionsForCategory(section: Section, categoryId: string) {
   return section.categoryQuestions.find((group) => group.categoryId === categoryId)?.questions ?? [];
 }
 
+export function getSectionTitleForCategory(section: Section, categoryId: string) {
+  return section.categoryQuestions.find((group) => group.categoryId === categoryId)?.title || section.title || section.generalTitle || "";
+}
+
+export function getGeneralQuestions(section: Section) {
+  return section.generalQuestions ?? [];
+}
+
+export function getGeneralSectionTitle(section: Section) {
+  return section.generalTitle || section.title || "";
+}
+
 export function normalizeState(value: unknown): FormState {
   if (!value || typeof value !== "object") return defaultState();
 
@@ -150,13 +165,21 @@ export function normalizeState(value: unknown): FormState {
   const sections = rawSections.map((section) => {
     const record = section && typeof section === "object" ? (section as Record<string, unknown>) : {};
     const legacyQuestions = Array.isArray(record.questions) ? record.questions : [];
+    const rawGeneralQuestions = Array.isArray(record.generalQuestions)
+      ? record.generalQuestions
+      : [];
     const rawCategoryQuestions = Array.isArray(record.categoryQuestions)
       ? record.categoryQuestions
       : [];
 
+    const baseTitle = String(record.title ?? "");
+    const generalTitle = String(record.generalTitle ?? baseTitle);
+
     return {
       id: String(record.id ?? ""),
-      title: String(record.title ?? ""),
+      title: baseTitle,
+      generalTitle,
+      generalQuestions: (rawGeneralQuestions.length ? rawGeneralQuestions : []).map(normalizeQuestion),
       categoryQuestions: fallbackCategories.map((category) => {
         const matchingGroup = rawCategoryQuestions.find((group) => {
           const groupRecord =
@@ -177,6 +200,7 @@ export function normalizeState(value: unknown): FormState {
 
         return {
           categoryId: category.id,
+          title: String(groupRecord.title ?? baseTitle),
           questions: sourceQuestions.map(normalizeQuestion),
         };
       }),

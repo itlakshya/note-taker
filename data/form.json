@@ -1,66 +1,68 @@
 {
   "categories": [
     {
-      "id": "e8dfe997e4bdb19cff43651d",
+      "id": "566127251ccb8819d098154d1",
       "name": "12"
     }
   ],
   "sections": [
     {
-      "id": "d53306efc30f819cff4df0bb",
-      "title": "test",
+      "id": "f138299419122819d0980edb2",
+      "title": "How are you",
+      "generalTitle": "Sell yourself",
+      "generalQuestions": [
+        {
+          "id": "8f04f2afeb74e819d098100a5",
+          "type": "dropdown",
+          "label": "test",
+          "required": true,
+          "includeInCopy": true,
+          "options": [
+            {
+              "id": "72dd7be7f429819d09812cb9",
+              "text": "1",
+              "inputType": "dropdown",
+              "followUp": "none",
+              "followRequired": false,
+              "subRequired": false,
+              "subOptions": [],
+              "childQuestions": []
+            },
+            {
+              "id": "bd3c3ab9c674e819d0981352e",
+              "text": "2",
+              "inputType": "dropdown",
+              "followUp": "none",
+              "followRequired": false,
+              "subRequired": false,
+              "subOptions": [],
+              "childQuestions": []
+            },
+            {
+              "id": "82234c8f85f6919d09813d9c",
+              "text": "3",
+              "inputType": "dropdown",
+              "followUp": "none",
+              "followRequired": false,
+              "subRequired": false,
+              "subOptions": [],
+              "childQuestions": []
+            }
+          ]
+        }
+      ],
       "categoryQuestions": [
         {
-          "categoryId": "e8dfe997e4bdb19cff43651d",
+          "categoryId": "566127251ccb8819d098154d1",
+          "title": "How are you",
           "questions": [
             {
-              "id": "ee81338578db919cff4e062e",
-              "type": "dropdown",
-              "label": "this is a test for dropdown and checkbox",
+              "id": "a4824945a71fe19d098185c2",
+              "type": "text",
+              "label": "sugam anno",
               "required": false,
               "includeInCopy": true,
-              "options": [
-                {
-                  "id": "bb2987a16f724819cff4e3fab",
-                  "text": "test",
-                  "inputType": "dropdown",
-                  "followUp": "none",
-                  "followRequired": false,
-                  "subRequired": false,
-                  "subOptions": [],
-                  "childQuestions": []
-                },
-                {
-                  "id": "a2dae573856ac19cff4e5895",
-                  "text": "hai",
-                  "inputType": "dropdown",
-                  "followUp": "subcheckbox",
-                  "followRequired": false,
-                  "subRequired": true,
-                  "subOptions": [
-                    {
-                      "text": "1"
-                    },
-                    {
-                      "text": "2"
-                    },
-                    {
-                      "text": "3"
-                    }
-                  ],
-                  "childQuestions": []
-                },
-                {
-                  "id": "cd2affcaf96f419cff4e7024",
-                  "text": "hello",
-                  "inputType": "checkbox",
-                  "followUp": "none",
-                  "followRequired": false,
-                  "subRequired": false,
-                  "subOptions": [],
-                  "childQuestions": []
-                }
-              ]
+              "options": []
             }
           ]
         }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { getQuestionsForCategory, type FormState, type Option, type Question, type Section } from "@/lib/form-state";
+import { getGeneralQuestions, getGeneralSectionTitle, getQuestionsForCategory, getSectionTitleForCategory, type FormState, type Option, type Question, type Section } from "@/lib/form-state";
 
 type Answer = {
   section: string;
@@ -23,6 +23,10 @@ async function loadState() {
 
 function fieldKey(categoryId: string, path: string) {
   return `q_${categoryId}_${path}`;
+}
+
+function scopeKey(selectedCategoryId: string, path: string) {
+  return path.startsWith("general__") ? "general" : selectedCategoryId;
 }
 
 function getAnswerText(value: string | string[]) {
@@ -74,7 +78,7 @@ export default function UserFormPage() {
     loadState().then((data) => {
       if (!active) return;
       setState(data);
-      setSelectedCategoryId(data.categories[0]?.id || "");
+      setSelectedCategoryId("");
       setLoading(false);
     });
     return () => {
@@ -90,12 +94,24 @@ export default function UserFormPage() {
 
   const selectedCategoryName = state.categories.find((category) => category.id === selectedCategoryId)?.name || "";
 
-  const visibleSections = useMemo(() => {
+  const generalSections = useMemo(() => {
+    return state.sections
+      .map((section) => ({ section, questions: getGeneralQuestions(section) }))
+      .filter((entry) => entry.questions.length > 0);
+  }, [state.sections]);
+
+  const categorySections = useMemo(() => {
     if (!selectedCategoryId) return [] as Array<{ section: Section; questions: Question[] }>;
     return state.sections
       .map((section) => ({ section, questions: getQuestionsForCategory(section, selectedCategoryId) }))
       .filter((entry) => entry.questions.length > 0);
   }, [selectedCategoryId, state.sections]);
+
+  const hasCategorySpecificQuestions = useMemo(() => {
+    return state.sections.some((section) =>
+      section.categoryQuestions.some((group) => group.questions.length > 0),
+    );
+  }, [state.sections]);
 
   function collectSubCheckboxValues(name: string) {
     const selected: string[] = [];
@@ -112,7 +128,7 @@ export default function UserFormPage() {
   }
 
   function formatOptionAnswer(questionPath: string, option: Option) {
-    const baseField = fieldKey(selectedCategoryId, questionPath);
+    const baseField = fieldKey(scopeKey(selectedCategoryId, questionPath), questionPath);
 
     if (option.followUp === "text") {
       const follow = document.getElementById(`${baseField}__f_${option.id}`) as HTMLInputElement | null;
@@ -134,7 +150,7 @@ export default function UserFormPage() {
   }
 
   function validateQuestion(sectionTitle: string, question: Question, path: string, answers: Answer[]) {
-    const field = fieldKey(selectedCategoryId, path);
+    const field = fieldKey(scopeKey(selectedCategoryId, path), path);
     const errors: string[] = [];
 
     if (question.type === "text") {
@@ -215,8 +231,21 @@ export default function UserFormPage() {
   function validateAndCollect() {
     const answers: Answer[] = [];
     const errors: string[] = [];
-    visibleSections.forEach(({ section, questions }) => {
-      const sectionTitle = section.title || "Untitled Section";
+    generalSections.forEach(({ section, questions }) => {
+      const sectionTitle = getGeneralSectionTitle(section) || "Untitled Section";
+      questions.forEach((question) => {
+        errors.push(...validateQuestion(sectionTitle, question, `general__${question.id}`, answers));
+      });
+    });
+
+    if (hasCategorySpecificQuestions && !selectedCategoryId) {
+      setFieldErrors([]);
+      setGlobalError("Please choose a category to continue.");
+      return { ok: false as const };
+    }
+
+    categorySections.forEach(({ section, questions }) => {
+      const sectionTitle = getSectionTitleForCategory(section, selectedCategoryId) || "Untitled Section";
       questions.forEach((question) => {
         errors.push(...validateQuestion(sectionTitle, question, question.id, answers));
       });
@@ -256,16 +285,16 @@ export default function UserFormPage() {
   function renderFollowUp(questionPath: string, option: Option | undefined) {
     if (!option || option.followUp === "none") return null;
     if (option.followUp === "text") {
-      return <div className="follow"><label className="questionLabel">Please specify:</label><input id={`${fieldKey(selectedCategoryId, questionPath)}__f_${option.id}`} type="text" /></div>;
+      return <div className="follow"><label className="questionLabel">Please specify:</label><input id={`${fieldKey(scopeKey(selectedCategoryId, questionPath), questionPath)}__f_${option.id}`} type="text" /></div>;
     }
     if (option.followUp === "subdropdown") {
-      return <div className="follow"><label className="questionLabel">Select one:</label><select id={`${fieldKey(selectedCategoryId, questionPath)}__sd_${option.id}`} defaultValue=""><option value="">Select...</option>{option.subOptions.map((subOption, index) => <option key={`${option.id}_sd_${index}`} value={subOption.text}>{subOption.text}</option>)}</select></div>;
+      return <div className="follow"><label className="questionLabel">Select one:</label><select id={`${fieldKey(scopeKey(selectedCategoryId, questionPath), questionPath)}__sd_${option.id}`} defaultValue=""><option value="">Select...</option>{option.subOptions.map((subOption, index) => <option key={`${option.id}_sd_${index}`} value={subOption.text}>{subOption.text}</option>)}</select></div>;
     }
-    return <div className="follow"><div className="muted">Select all that apply:</div><div className="subchecks">{option.subOptions.map((subOption, index) => { const id = `${fieldKey(selectedCategoryId, questionPath)}__sub_${option.id}_${index}`; return <div className="subitem" key={id}><input type="checkbox" id={id} name={`${fieldKey(selectedCategoryId, questionPath)}__sub_${option.id}`} value={subOption.text} /><label htmlFor={id}>{subOption.text}</label></div>; })}</div></div>;
+    return <div className="follow"><div className="muted">Select all that apply:</div><div className="subchecks">{option.subOptions.map((subOption, index) => { const id = `${fieldKey(scopeKey(selectedCategoryId, questionPath), questionPath)}__sub_${option.id}_${index}`; return <div className="subitem" key={id}><input type="checkbox" id={id} name={`${fieldKey(scopeKey(selectedCategoryId, questionPath), questionPath)}__sub_${option.id}`} value={subOption.text} /><label htmlFor={id}>{subOption.text}</label></div>; })}</div></div>;
   }
 
   function renderQuestion(question: Question, path: string, inline = false): React.JSX.Element {
-    const field = fieldKey(selectedCategoryId, path);
+    const field = fieldKey(scopeKey(selectedCategoryId, path), path);
     const hasError = fieldErrors.includes(field);
     const showLabel = !inline && question.type != "subdropdown" && Boolean(question.label);
 
@@ -304,8 +333,13 @@ export default function UserFormPage() {
         <section className="card" style={{ display: previewAnswers ? "none" : undefined }}>
           <div className="cardHeader"><h2>Fill the form</h2><span className="muted">Submit to preview your answers</span></div>
           <div className="cardBody">
-            {state.categories.length ? <div className="row filterRow"><div className="selectCell"><label>Category Filter</label><select value={selectedCategoryId} onChange={(event) => { setSelectedCategoryId(event.target.value); setPreviewAnswers(null); setFieldErrors([]); setGlobalError(""); }}><option value="">Select category</option>{state.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div></div> : null}
-            {visibleSections.length ? <form>{visibleSections.map(({ section, questions }) => <div className="userSection" key={`${selectedCategoryId}_${section.id}`}><div className="userSectionTitle">{section.title || "Untitled Section"}</div>{questions.map((question) => renderQuestion(question, question.id))}</div>)}</form> : <p className="muted">No questions available for the selected category.</p>}
+            <form>
+              {generalSections.map(({ section, questions }) => <div className="userSection" key={`general_${section.id}`}><div className="userSectionTitle">{getGeneralSectionTitle(section) || "Untitled Section"}</div>{questions.map((question) => renderQuestion(question, `general__${question.id}`))}</div>)}
+              {state.categories.length && hasCategorySpecificQuestions ? <div className="row filterRow"><div className="selectCell"><label>Choose Category</label><select value={selectedCategoryId} onChange={(event) => { setSelectedCategoryId(event.target.value); setPreviewAnswers(null); setFieldErrors([]); setGlobalError(""); }}><option value="">Select category</option>{state.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div></div> : null}
+              {selectedCategoryId ? categorySections.map(({ section, questions }) => <div className="userSection" key={`${selectedCategoryId}_${section.id}`}><div className="userSectionTitle">{getSectionTitleForCategory(section, selectedCategoryId) || "Untitled Section"}</div>{questions.map((question) => renderQuestion(question, question.id))}</div>) : null}
+            </form>
+            {!generalSections.length && !hasCategorySpecificQuestions ? <p className="muted">No questions available.</p> : null}
+            {hasCategorySpecificQuestions && !selectedCategoryId ? <p className="muted">Select a category to continue with category-specific questions.</p> : null}
             <div className="actions"><button className="primaryButton" type="button" onClick={() => { const result = validateAndCollect(); if (result.ok) setPreviewAnswers(result.answers); }}>Submit</button><button className="dangerButton" type="button" onClick={() => window.location.reload()}>Reset</button></div>
             {globalError ? <div className="error globalError">{globalError}</div> : null}
           </div>
