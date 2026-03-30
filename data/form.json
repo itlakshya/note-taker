@@ -1,27 +1,22 @@
 {
-  "categories": [
-    {
-      "id": "566127251ccb8819d098154d1",
-      "name": "12"
-    }
-  ],
+  "categories": [],
   "sections": [
     {
-      "id": "f138299419122819d0980edb2",
-      "title": "How are you",
-      "generalTitle": "Sell yourself",
+      "id": "715ace5e41cda819d3d33161b",
+      "title": "Call Opening",
+      "generalTitle": "Call Opening",
       "generalQuestions": [
         {
-          "id": "8f04f2afeb74e819d098100a5",
+          "id": "855715c60e2e1819d3d332506",
           "type": "dropdown",
-          "label": "test",
-          "required": true,
-          "includeInCopy": true,
+          "label": "",
+          "required": false,
+          "includeInCopy": false,
           "options": [
             {
-              "id": "72dd7be7f429819d09812cb9",
-              "text": "1",
-              "inputType": "dropdown",
+              "id": "85e6fbd8924d9819d3d33e86b",
+              "text": "Use Greeting + Student Name instead of Am i talking to XXXX",
+              "inputType": "checkbox",
               "followUp": "none",
               "followRequired": false,
               "subRequired": false,
@@ -29,9 +24,9 @@
               "childQuestions": []
             },
             {
-              "id": "bd3c3ab9c674e819d0981352e",
-              "text": "2",
-              "inputType": "dropdown",
+              "id": "f54e50199bae919d3d3410e1",
+              "text": "Mention the reason for call in brief (Do not ask like have you enquired)",
+              "inputType": "checkbox",
               "followUp": "none",
               "followRequired": false,
               "subRequired": false,
@@ -39,9 +34,9 @@
               "childQuestions": []
             },
             {
-              "id": "82234c8f85f6919d09813d9c",
-              "text": "3",
-              "inputType": "dropdown",
+              "id": "b16bdf7406e2d19d3d34310e",
+              "text": "Never ask like \"Free to talk\"",
+              "inputType": "checkbox",
               "followUp": "none",
               "followRequired": false,
               "subRequired": false,
@@ -51,22 +46,54 @@
           ]
         }
       ],
-      "categoryQuestions": [
+      "categoryQuestions": []
+    },
+    {
+      "id": "21147ce239ed6819d3d3c30a5",
+      "title": "Self Selling",
+      "generalTitle": "Self Selling",
+      "generalQuestions": [
         {
-          "categoryId": "566127251ccb8819d098154d1",
-          "title": "How are you",
-          "questions": [
+          "id": "d93f9ca038c26819d3d3c3f20",
+          "type": "dropdown",
+          "label": "",
+          "required": false,
+          "includeInCopy": false,
+          "options": [
             {
-              "id": "a4824945a71fe19d098185c2",
-              "type": "text",
-              "label": "sugam anno",
-              "required": false,
-              "includeInCopy": true,
-              "options": []
+              "id": "da654e85511b2819d3d3c91ac",
+              "text": "No. of Students Counselled on a daily basis",
+              "inputType": "checkbox",
+              "followUp": "none",
+              "followRequired": false,
+              "subRequired": false,
+              "subOptions": [],
+              "childQuestions": []
+            },
+            {
+              "id": "aa1a2a8c86edb19d3d3cb199",
+              "text": "Past experience with Counselling (How our guidance helped them)",
+              "inputType": "checkbox",
+              "followUp": "none",
+              "followRequired": false,
+              "subRequired": false,
+              "subOptions": [],
+              "childQuestions": []
+            },
+            {
+              "id": "ae5ff24a4a441819d3d3ccc24",
+              "text": "Year of Experience in counselling (Helps to decide the best for students",
+              "inputType": "checkbox",
+              "followUp": "none",
+              "followRequired": false,
+              "subRequired": false,
+              "subOptions": [],
+              "childQuestions": []
             }
           ]
         }
-      ]
+      ],
+      "categoryQuestions": []
     }
   ]
 }

@@ -299,30 +299,37 @@ export default function UserFormPage() {
     return <div className="follow"><div className="muted">Select all that apply:</div><div className="subchecks">{option.subOptions.map((subOption, index) => { const id = `${fieldKey(scopeKey(selectedCategoryId, questionPath), questionPath)}__sub_${option.id}_${index}`; return <div className="subitem" key={id}><input type="checkbox" id={id} name={`${fieldKey(scopeKey(selectedCategoryId, questionPath), questionPath)}__sub_${option.id}`} value={subOption.text} /><label htmlFor={id}>{subOption.text}</label></div>; })}</div></div>;
   }
 
-  function renderQuestion(question: Question, path: string, inline = false): React.JSX.Element {
+  function renderQuestion(question: Question, path: string, inline = false, suppressHeader = false): React.JSX.Element {
     const field = fieldKey(scopeKey(selectedCategoryId, path), path);
     const hasError = fieldErrors.includes(field);
     const showLabel = !inline && question.type != "subdropdown" && Boolean(question.label);
     const isGeneralToggleQuestion = path.startsWith("general__") && question.type !== "text";
     const isEnabled = !isGeneralToggleQuestion || Boolean(generalQuestionToggles[field]);
+    const questionText = `${question.label || "Question"}${question.required ? " *" : ""}`;
 
     if (question.type === "text") {
       return <div className={inline ? "inlineQuestion" : "userQuestion"} key={path}>{showLabel ? <label className="questionLabel" htmlFor={field}>{question.label}{question.required ? " *" : ""}</label> : null}{hasError ? <div className="error">This field is required.</div> : null}<input id={field} type="text" /></div>;
     }
 
-    const toggleControl = isGeneralToggleQuestion ? <div className="checkitem"><input type="checkbox" id={`${field}__toggle`} checked={Boolean(generalQuestionToggles[field])} onChange={(event) => setGeneralQuestionToggles((current) => ({ ...current, [field]: event.target.checked }))} /><div className="checkitemBody"><label htmlFor={`${field}__toggle`}>{question.label || "Question"}</label></div></div> : null;
+    const questionHeader = suppressHeader
+      ? null
+      : isGeneralToggleQuestion
+        ? <label className="questionToggleRow" htmlFor={`${field}__toggle`}><input type="checkbox" id={`${field}__toggle`} checked={Boolean(generalQuestionToggles[field])} onChange={(event) => setGeneralQuestionToggles((current) => ({ ...current, [field]: event.target.checked }))} /><span className="questionToggleText">{questionText}</span></label>
+        : showLabel
+          ? <label className="questionLabel" htmlFor={field}>{questionText}</label>
+          : null;
 
     if (question.type === "subdropdown") {
+      const selectId = isGeneralToggleQuestion ? `${field}__select` : field;
       const selectedOption = question.options.find((option) => option.id === dropdownSelections[field]);
-      return <div className={inline ? "inlineQuestion" : "userQuestion"} key={path}>{toggleControl}{!isGeneralToggleQuestion && showLabel ? <label className="questionLabel" htmlFor={field}>{question.label}{question.required ? " *" : ""}</label> : null}{hasError ? <div className="error">This field is required.</div> : null}{isEnabled ? <><select id={field} defaultValue="" onChange={(event) => setDropdownSelections((current) => ({ ...current, [field]: event.target.value }))}><option value="">Select sub option...</option>{question.options.map((option) => <option key={option.id} value={option.id}>{option.text || "Option"}</option>)}</select>{renderFollowUp(path, selectedOption)}{selectedOption?.childQuestions.length ? <div className="nestedInlineWrap">{selectedOption.childQuestions.map((childQuestion) => renderQuestion(childQuestion, `${path}__${selectedOption.id}__${childQuestion.id}`, true))}</div> : null}</> : null}</div>;
+      return <div className={inline ? "inlineQuestion" : "userQuestion"} key={path}>{questionHeader}{hasError ? <div className="error">This field is required.</div> : null}{isEnabled ? <><select id={selectId} defaultValue="" onChange={(event) => setDropdownSelections((current) => ({ ...current, [field]: event.target.value }))}><option value="">Select sub option...</option>{question.options.map((option) => <option key={option.id} value={option.id}>{option.text || "Option"}</option>)}</select>{renderFollowUp(path, selectedOption)}{selectedOption?.childQuestions.length ? <div className="nestedInlineWrap">{selectedOption.childQuestions.map((childQuestion) => renderQuestion(childQuestion, `${path}__${selectedOption.id}__${childQuestion.id}`, true))}</div> : null}</> : null}</div>;
     }
 
-    const checkboxOptions = question.options.filter((option) => option.inputType !== "dropdown");
     const dropdownOptions = question.options.filter((option) => option.inputType === "dropdown");
     const selectedDropdownOption = dropdownOptions.find((option) => option.id === dropdownSelections[`${field}__dropdown`]);
     let dropdownRendered = false;
 
-    return <div className={inline ? "inlineQuestion" : "userQuestion"} key={path}>{toggleControl}{!isGeneralToggleQuestion && showLabel ? <label className="questionLabel" htmlFor={field}>{question.label}{question.required ? " *" : ""}</label> : null}{hasError ? <div className="error">This field is required.</div> : null}{isEnabled ? <div className="checklist" id={field}>{question.options.map((option, index) => {
+    return <div className={inline ? "inlineQuestion" : "userQuestion"} key={path}>{questionHeader}{hasError ? <div className="error">This field is required.</div> : null}{isEnabled ? <div className="checklist" id={field}>{question.options.map((option, index) => {
       if (option.inputType === "dropdown") {
         if (dropdownRendered) return null;
         dropdownRendered = true;
@@ -344,7 +351,7 @@ export default function UserFormPage() {
           <div className="cardHeader"><h2>Fill the form</h2><span className="muted">Submit to preview your answers</span></div>
           <div className="cardBody">
             <form>
-              {generalSections.map(({ section, questions }) => <div className="userSection" key={`general_${section.id}`}><div className="userSectionTitle">{getGeneralSectionTitle(section) || "Untitled Section"}</div>{questions.map((question) => renderQuestion(question, `general__${question.id}`))}</div>)}
+              {generalSections.map(({ section, questions }) => { const sectionTitle = getGeneralSectionTitle(section) || "Untitled Section"; const inlineQuestion = questions.length === 1 && questions[0].type !== "text" && isPlaceholderLabel(questions[0].label); if (inlineQuestion) { const question = questions[0]; const path = `general__${question.id}`; const field = fieldKey("general", path); return <div className="userSection" key={`general_${section.id}`}><div className="userSectionHeadInline"><div className="userSectionTitle">{sectionTitle}</div><label className="sectionToggleOnly" htmlFor={`${field}__toggle`} aria-label={`Toggle ${sectionTitle}`}><input type="checkbox" id={`${field}__toggle`} checked={Boolean(generalQuestionToggles[field])} onChange={(event) => setGeneralQuestionToggles((current) => ({ ...current, [field]: event.target.checked }))} /></label></div>{renderQuestion(question, path, true, true)}</div>; } return <div className="userSection" key={`general_${section.id}`}><div className="userSectionTitle">{sectionTitle}</div>{questions.map((question) => renderQuestion(question, `general__${question.id}`))}</div>; })}
               {state.categories.length && hasCategorySpecificQuestions ? <div className="row filterRow"><div className="selectCell"><label>Choose Category</label><select value={selectedCategoryId} onChange={(event) => { setSelectedCategoryId(event.target.value); setPreviewAnswers(null); setFieldErrors([]); setGlobalError(""); }}><option value="">Select category</option>{state.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div></div> : null}
               {selectedCategoryId ? categorySections.map(({ section, questions }) => <div className="userSection" key={`${selectedCategoryId}_${section.id}`}><div className="userSectionTitle">{getSectionTitleForCategory(section, selectedCategoryId) || "Untitled Section"}</div>{questions.map((question) => renderQuestion(question, question.id))}</div>) : null}
             </form>
