@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { getGeneralQuestions, getGeneralSectionTitle, getQuestionsForCategory, getSectionTitleForCategory, type FormState, type Option, type Question, type Section } from "@/lib/form-state";
+import { defaultState, getGeneralQuestions, getGeneralSectionTitle, getQuestionsForCategory, getSectionTitleForCategory, type FormState, type Option, type Question, type Section } from "@/lib/form-state";
 
 type Answer = {
   section: string;
@@ -13,11 +13,11 @@ type Answer = {
 async function loadState() {
   try {
     const response = await fetch("/api/form", { cache: "no-store" });
-    if (!response.ok) return { categories: [], sections: [] } satisfies FormState;
+    if (!response.ok) return defaultState();
     const data = (await response.json()) as FormState;
-    return Array.isArray(data.sections) ? data : { categories: [], sections: [] };
+    return Array.isArray(data.sections) ? { ...defaultState(), ...data } : defaultState();
   } catch {
-    return { categories: [], sections: [] };
+    return defaultState();
   }
 }
 
@@ -63,7 +63,7 @@ function buildCopyText(categoryName: string, answers: Answer[]) {
 }
 
 export default function UserFormPage() {
-  const [state, setState] = useState<FormState>({ categories: [], sections: [] });
+  const [state, setState] = useState<FormState>(defaultState());
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [loading, setLoading] = useState(true);
   const [previewAnswers, setPreviewAnswers] = useState<Answer[] | null>(null);
@@ -73,6 +73,8 @@ export default function UserFormPage() {
   const [dropdownSelections, setDropdownSelections] = useState<Record<string, string>>({});
   const [checkedOptions, setCheckedOptions] = useState<Record<string, boolean>>({});
   const [generalQuestionToggles, setGeneralQuestionToggles] = useState<Record<string, boolean>>({});
+  const [mainSectionEnabled, setMainSectionEnabled] = useState(false);
+  const [mainSectionDropdownValue, setMainSectionDropdownValue] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -80,6 +82,8 @@ export default function UserFormPage() {
       if (!active) return;
       setState(data);
       setSelectedCategoryId("");
+      setMainSectionEnabled(false);
+      setMainSectionDropdownValue("");
       setLoading(false);
     });
     return () => {
@@ -234,15 +238,21 @@ export default function UserFormPage() {
     return errors;
   }
 
+  const isMainSectionActive = state.mainSectionInputType === "dropdown"
+    ? mainSectionDropdownValue === "enabled"
+    : mainSectionEnabled;
+
   function validateAndCollect() {
     const answers: Answer[] = [];
     const errors: string[] = [];
-    generalSections.forEach(({ section, questions }) => {
-      const sectionTitle = getGeneralSectionTitle(section) || "Untitled Section";
-      questions.forEach((question) => {
-        errors.push(...validateQuestion(sectionTitle, question, `general__${question.id}`, answers));
+    if (isMainSectionActive) {
+      generalSections.forEach(({ section, questions }) => {
+        const sectionTitle = getGeneralSectionTitle(section) || "Untitled Section";
+        questions.forEach((question) => {
+          errors.push(...validateQuestion(sectionTitle, question, `general__${question.id}`, answers));
+        });
       });
-    });
+    }
 
     if (hasCategorySpecificQuestions && !selectedCategoryId) {
       setFieldErrors([]);
@@ -351,7 +361,38 @@ export default function UserFormPage() {
           <div className="cardHeader"><h2>Fill the form</h2><span className="muted">Submit to preview your answers</span></div>
           <div className="cardBody">
             <form>
-              {generalSections.map(({ section, questions }) => { const sectionTitle = getGeneralSectionTitle(section) || "Untitled Section"; const inlineQuestion = questions.length === 1 && questions[0].type !== "text" && isPlaceholderLabel(questions[0].label); if (inlineQuestion) { const question = questions[0]; const path = `general__${question.id}`; const field = fieldKey("general", path); return <div className="userSection" key={`general_${section.id}`}><div className="userSectionHeadInline"><div className="userSectionTitle">{sectionTitle}</div><label className="sectionToggleOnly" htmlFor={`${field}__toggle`} aria-label={`Toggle ${sectionTitle}`}><input type="checkbox" id={`${field}__toggle`} checked={Boolean(generalQuestionToggles[field])} onChange={(event) => setGeneralQuestionToggles((current) => ({ ...current, [field]: event.target.checked }))} /></label></div>{renderQuestion(question, path, true, true)}</div>; } return <div className="userSection" key={`general_${section.id}`}><div className="userSectionTitle">{sectionTitle}</div>{questions.map((question) => renderQuestion(question, `general__${question.id}`))}</div>; })}
+              {generalSections.length ? (
+                <div className="userSection">
+                  <div className="userSectionHeadInline">
+                    <div className="userSectionTitle">{state.mainSectionTitle || "Main Section"}</div>
+                    {state.mainSectionInputType === "dropdown" ? (
+                      <div className="mainSectionSelectWrap">
+                        <select
+                          id="main-section-toggle"
+                          value={mainSectionDropdownValue}
+                          onChange={(event) => setMainSectionDropdownValue(event.target.value)}
+                          aria-label={`Select ${state.mainSectionTitle || "Main Section"}`}
+                        >
+                          <option value="">Select...</option>
+                          <option value="enabled">{state.mainSectionTitle || "Main Section"}</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <label className="sectionToggleOnly" htmlFor="main-section-toggle" aria-label={`Toggle ${state.mainSectionTitle || "Main Section"}`}>
+                        <input
+                          type="checkbox"
+                          id="main-section-toggle"
+                          checked={mainSectionEnabled}
+                          onChange={(event) => setMainSectionEnabled(event.target.checked)}
+                        />
+                      </label>
+                    )}
+                  </div>
+                  {isMainSectionActive
+                    ? generalSections.map(({ section, questions }) => { const sectionTitle = getGeneralSectionTitle(section) || "Untitled Section"; const inlineQuestion = questions.length === 1 && questions[0].type !== "text" && isPlaceholderLabel(questions[0].label); if (inlineQuestion) { const question = questions[0]; const path = `general__${question.id}`; const field = fieldKey("general", path); return <div className="userSection" key={`general_${section.id}`}><div className="userSectionHeadInline"><div className="userSectionTitle">{sectionTitle}</div><label className="sectionToggleOnly" htmlFor={`${field}__toggle`} aria-label={`Toggle ${sectionTitle}`}><input type="checkbox" id={`${field}__toggle`} checked={Boolean(generalQuestionToggles[field])} onChange={(event) => setGeneralQuestionToggles((current) => ({ ...current, [field]: event.target.checked }))} /></label></div>{renderQuestion(question, path, true, true)}</div>; } return <div className="userSection" key={`general_${section.id}`}><div className="userSectionTitle">{sectionTitle}</div>{questions.map((question) => renderQuestion(question, `general__${question.id}`))}</div>; })
+                    : null}
+                </div>
+              ) : null}
               {state.categories.length && hasCategorySpecificQuestions ? <div className="row filterRow"><div className="selectCell"><label>Choose Category</label><select value={selectedCategoryId} onChange={(event) => { setSelectedCategoryId(event.target.value); setPreviewAnswers(null); setFieldErrors([]); setGlobalError(""); }}><option value="">Select category</option>{state.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div></div> : null}
               {selectedCategoryId ? categorySections.map(({ section, questions }) => <div className="userSection" key={`${selectedCategoryId}_${section.id}`}><div className="userSectionTitle">{getSectionTitleForCategory(section, selectedCategoryId) || "Untitled Section"}</div>{questions.map((question) => renderQuestion(question, question.id))}</div>) : null}
             </form>

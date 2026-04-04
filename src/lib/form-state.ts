@@ -1,6 +1,7 @@
 export type FollowUpType = "none" | "text" | "subcheckbox" | "subdropdown";
 export type QuestionType = "text" | "dropdown" | "checkbox" | "subdropdown";
 export type OptionInputType = "checkbox" | "dropdown";
+export type MainSectionInputType = "checkbox" | "dropdown";
 
 export type SubOption = {
   text: string;
@@ -47,6 +48,8 @@ export type Section = {
 
 export type FormState = {
   categories: Category[];
+  mainSectionTitle: string;
+  mainSectionInputType: MainSectionInputType;
   sections: Section[];
 };
 
@@ -54,7 +57,12 @@ const GENERAL_CATEGORY_ID = "general";
 const GENERAL_CATEGORY_NAME = "General";
 
 export function defaultState(): FormState {
-  return { categories: [], sections: [] };
+  return {
+    categories: [],
+    mainSectionTitle: "Main Section",
+    mainSectionInputType: "checkbox",
+    sections: [],
+  };
 }
 
 export function smartDefaultFollowUp(optionText: string): FollowUpType {
@@ -209,6 +217,8 @@ export function normalizeState(value: unknown): FormState {
 
   return {
     categories: fallbackCategories,
+    mainSectionTitle: String(root.mainSectionTitle ?? "Main Section"),
+    mainSectionInputType: root.mainSectionInputType === "dropdown" ? "dropdown" : "checkbox",
     sections,
   };
 }

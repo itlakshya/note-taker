@@ -1,5 +1,7 @@
 {
   "categories": [],
+  "mainSectionTitle": "Test",
+  "mainSectionInputType": "checkbox",
   "sections": [
     {
       "id": "715ace5e41cda819d3d33161b",

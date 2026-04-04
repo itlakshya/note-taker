@@ -77,7 +77,7 @@ async function apiLoad() {
   const response = await fetch("/api/form", { cache: "no-store" });
   const data = (await response.json().catch(() => ({}))) as FormState;
   if (!data || !Array.isArray(data.sections)) return defaultState();
-  return data;
+  return { ...defaultState(), ...data };
 }
 
 async function apiSave(state: FormState) {
@@ -756,6 +756,37 @@ export default function AdminBuilderPage() {
             <span className="muted">Includes Text, Dropdown, Checkbox, and Sub dropdown.</span>
           </div>
           <div className="cardBody">
+            <div className="row">
+              <div className="grow">
+                <label>Main Section Title</label>
+                <input
+                  type="text"
+                  value={state.mainSectionTitle}
+                  onChange={(event) =>
+                    patch((next) => {
+                      next.mainSectionTitle = event.target.value;
+                    })
+                  }
+                />
+              </div>
+              <div className="selectCell">
+                <label>Main Section Input</label>
+                <select
+                  value={state.mainSectionInputType}
+                  onChange={(event) =>
+                    patch((next) => {
+                      next.mainSectionInputType = event.target.value === "dropdown" ? "dropdown" : "checkbox";
+                    })
+                  }
+                >
+                  <option value="checkbox">Checkbox</option>
+                  <option value="dropdown">Dropdown</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="divider" />
+
             <div className="row">
               <div className="grow">
                 <label>Add Section</label>
