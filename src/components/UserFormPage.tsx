@@ -101,9 +101,22 @@ export default function UserFormPage() {
 
   const generalSections = useMemo(() => {
     return state.sections
+      .filter((section) => !section.mainOptionId)
       .map((section) => ({ section, questions: getGeneralQuestions(section) }))
       .filter((entry) => entry.questions.length > 0);
   }, [state.sections]);
+
+  const dropdownSections = useMemo(() => {
+    return state.sections
+      .filter((section) => section.mainOptionId === mainSectionDropdownValue)
+      .map((section) => ({ section, questions: getGeneralQuestions(section) }))
+      .filter((entry) => entry.questions.length > 0);
+  }, [mainSectionDropdownValue, state.sections]);
+
+  const activeGeneralSections = useMemo(() => {
+    if (state.mainSectionInputType !== "dropdown") return generalSections;
+    return dropdownSections;
+  }, [dropdownSections, generalSections, state.mainSectionInputType]);
 
   const categorySections = useMemo(() => {
     if (!selectedCategoryId) return [] as Array<{ section: Section; questions: Question[] }>;
@@ -239,14 +252,14 @@ export default function UserFormPage() {
   }
 
   const isMainSectionActive = state.mainSectionInputType === "dropdown"
-    ? mainSectionDropdownValue === "enabled"
+    ? Boolean(mainSectionDropdownValue)
     : mainSectionEnabled;
 
   function validateAndCollect() {
     const answers: Answer[] = [];
     const errors: string[] = [];
     if (isMainSectionActive) {
-      generalSections.forEach(({ section, questions }) => {
+      activeGeneralSections.forEach(({ section, questions }) => {
         const sectionTitle = getGeneralSectionTitle(section) || "Untitled Section";
         questions.forEach((question) => {
           errors.push(...validateQuestion(sectionTitle, question, `general__${question.id}`, answers));
@@ -361,7 +374,7 @@ export default function UserFormPage() {
           <div className="cardHeader"><h2>Fill the form</h2><span className="muted">Submit to preview your answers</span></div>
           <div className="cardBody">
             <form>
-              {generalSections.length ? (
+              {(state.mainSectionInputType === "dropdown" ? state.mainSectionOptions.length : generalSections.length) ? (
                 <div className="userSection">
                   <div className="userSectionHeadInline">
                     <div className="userSectionTitle">{state.mainSectionTitle || "Main Section"}</div>
@@ -374,7 +387,7 @@ export default function UserFormPage() {
                           aria-label={`Select ${state.mainSectionTitle || "Main Section"}`}
                         >
                           <option value="">Select...</option>
-                          <option value="enabled">{state.mainSectionTitle || "Main Section"}</option>
+                          {state.mainSectionOptions.map((option) => <option key={option.id} value={option.id}>{option.title}</option>)}
                         </select>
                       </div>
                     ) : (
@@ -389,14 +402,14 @@ export default function UserFormPage() {
                     )}
                   </div>
                   {isMainSectionActive
-                    ? generalSections.map(({ section, questions }) => { const sectionTitle = getGeneralSectionTitle(section) || "Untitled Section"; const inlineQuestion = questions.length === 1 && questions[0].type !== "text" && isPlaceholderLabel(questions[0].label); if (inlineQuestion) { const question = questions[0]; const path = `general__${question.id}`; const field = fieldKey("general", path); return <div className="userSection" key={`general_${section.id}`}><div className="userSectionHeadInline"><div className="userSectionTitle">{sectionTitle}</div><label className="sectionToggleOnly" htmlFor={`${field}__toggle`} aria-label={`Toggle ${sectionTitle}`}><input type="checkbox" id={`${field}__toggle`} checked={Boolean(generalQuestionToggles[field])} onChange={(event) => setGeneralQuestionToggles((current) => ({ ...current, [field]: event.target.checked }))} /></label></div>{renderQuestion(question, path, true, true)}</div>; } return <div className="userSection" key={`general_${section.id}`}><div className="userSectionTitle">{sectionTitle}</div>{questions.map((question) => renderQuestion(question, `general__${question.id}`))}</div>; })
+                    ? activeGeneralSections.map(({ section, questions }) => { const sectionTitle = getGeneralSectionTitle(section) || "Untitled Section"; const inlineQuestion = questions.length === 1 && questions[0].type !== "text" && isPlaceholderLabel(questions[0].label); if (inlineQuestion) { const question = questions[0]; const path = `general__${question.id}`; const field = fieldKey("general", path); return <div className="userSection" key={`general_${section.id}`}><div className="userSectionHeadInline"><div className="userSectionTitle">{sectionTitle}</div><label className="sectionToggleOnly" htmlFor={`${field}__toggle`} aria-label={`Toggle ${sectionTitle}`}><input type="checkbox" id={`${field}__toggle`} checked={Boolean(generalQuestionToggles[field])} onChange={(event) => setGeneralQuestionToggles((current) => ({ ...current, [field]: event.target.checked }))} /></label></div>{renderQuestion(question, path, true, true)}</div>; } return <div className="userSection" key={`general_${section.id}`}><div className="userSectionTitle">{sectionTitle}</div>{questions.map((question) => renderQuestion(question, `general__${question.id}`))}</div>; })
                     : null}
                 </div>
               ) : null}
               {state.categories.length && hasCategorySpecificQuestions ? <div className="row filterRow"><div className="selectCell"><label>Choose Category</label><select value={selectedCategoryId} onChange={(event) => { setSelectedCategoryId(event.target.value); setPreviewAnswers(null); setFieldErrors([]); setGlobalError(""); }}><option value="">Select category</option>{state.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div></div> : null}
               {selectedCategoryId ? categorySections.map(({ section, questions }) => <div className="userSection" key={`${selectedCategoryId}_${section.id}`}><div className="userSectionTitle">{getSectionTitleForCategory(section, selectedCategoryId) || "Untitled Section"}</div>{questions.map((question) => renderQuestion(question, question.id))}</div>) : null}
             </form>
-            {!generalSections.length && !hasCategorySpecificQuestions ? <p className="muted">No questions available.</p> : null}
+            {!(state.mainSectionInputType === "dropdown" ? state.mainSectionOptions.length : generalSections.length) && !hasCategorySpecificQuestions ? <p className="muted">No questions available.</p> : null}
             {hasCategorySpecificQuestions && !selectedCategoryId ? <p className="muted">Select a category to continue with category-specific questions.</p> : null}
             <div className="actions"><button className="primaryButton" type="button" onClick={() => { const result = validateAndCollect(); if (result.ok) setPreviewAnswers(result.answers); }}>Submit</button><button className="dangerButton" type="button" onClick={() => window.location.reload()}>Reset</button></div>
             {globalError ? <div className="error globalError">{globalError}</div> : null}

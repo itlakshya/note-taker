@@ -3,6 +3,11 @@ export type QuestionType = "text" | "dropdown" | "checkbox" | "subdropdown";
 export type OptionInputType = "checkbox" | "dropdown";
 export type MainSectionInputType = "checkbox" | "dropdown";
 
+export type MainSectionOption = {
+  id: string;
+  title: string;
+};
+
 export type SubOption = {
   text: string;
 };
@@ -30,6 +35,9 @@ export type Question = {
 export type Category = {
   id: string;
   name: string;
+  mainSectionTitle: string;
+  mainSectionInputType: MainSectionInputType;
+  mainSectionOptions: MainSectionOption[];
 };
 
 export type CategoryQuestionGroup = {
@@ -42,6 +50,8 @@ export type Section = {
   id: string;
   title: string;
   generalTitle: string;
+  mainOptionId?: string;
+  categoryOwnerId?: string;
   generalQuestions: Question[];
   categoryQuestions: CategoryQuestionGroup[];
 };
@@ -50,6 +60,7 @@ export type FormState = {
   categories: Category[];
   mainSectionTitle: string;
   mainSectionInputType: MainSectionInputType;
+  mainSectionOptions: MainSectionOption[];
   sections: Section[];
 };
 
@@ -61,6 +72,7 @@ export function defaultState(): FormState {
     categories: [],
     mainSectionTitle: "Main Section",
     mainSectionInputType: "checkbox",
+    mainSectionOptions: [],
     sections: [],
   };
 }
@@ -152,9 +164,27 @@ export function normalizeState(value: unknown): FormState {
             category && typeof category === "object"
               ? (category as Record<string, unknown>)
               : {};
+          const mainSectionOptions = Array.isArray(record.mainSectionOptions)
+            ? record.mainSectionOptions
+                .map((option, index) => {
+                  if (typeof option === "string") {
+                    const title = option.trim();
+                    return title ? { id: `cat_main_option_${index + 1}`, title } : null;
+                  }
+                  const optionRecord = option && typeof option === "object" ? (option as Record<string, unknown>) : {};
+                  const id = String(optionRecord.id ?? `cat_main_option_${index + 1}`);
+                  const title = String(optionRecord.title ?? "").trim();
+                  return id && title ? { id, title } : null;
+                })
+                .filter((option): option is MainSectionOption => Boolean(option))
+            : [];
+
           return {
             id: String(record.id ?? ""),
             name: String(record.name ?? ""),
+            mainSectionTitle: String(record.mainSectionTitle ?? "Main Section"),
+            mainSectionInputType: (record.mainSectionInputType === "dropdown" ? "dropdown" : "checkbox") as MainSectionInputType,
+            mainSectionOptions,
           };
         })
         .filter((category) => category.id && category.name)
@@ -167,7 +197,7 @@ export function normalizeState(value: unknown): FormState {
           section && typeof section === "object" ? (section as Record<string, unknown>) : {};
         return Array.isArray(record.questions) && record.questions.length > 0;
       })
-      ? [{ id: GENERAL_CATEGORY_ID, name: GENERAL_CATEGORY_NAME }]
+      ? [{ id: GENERAL_CATEGORY_ID, name: GENERAL_CATEGORY_NAME, mainSectionTitle: "Main Section", mainSectionInputType: "checkbox" as MainSectionInputType, mainSectionOptions: [] }]
       : [];
 
   const sections = rawSections.map((section) => {
@@ -187,6 +217,8 @@ export function normalizeState(value: unknown): FormState {
       id: String(record.id ?? ""),
       title: baseTitle,
       generalTitle,
+      mainOptionId: String(record.mainOptionId ?? "") || undefined,
+      categoryOwnerId: String(record.categoryOwnerId ?? "") || undefined,
       generalQuestions: (rawGeneralQuestions.length ? rawGeneralQuestions : []).map(normalizeQuestion),
       categoryQuestions: fallbackCategories.map((category) => {
         const matchingGroup = rawCategoryQuestions.find((group) => {
@@ -215,10 +247,27 @@ export function normalizeState(value: unknown): FormState {
     };
   });
 
+  const mainSectionOptions = Array.isArray(root.mainSectionOptions)
+    ? root.mainSectionOptions
+        .map((option, index) => {
+          if (typeof option === "string") {
+            const title = option.trim();
+            return title ? { id: `main_option_${index + 1}`, title } : null;
+          }
+
+          const record = option && typeof option === "object" ? (option as Record<string, unknown>) : {};
+          const id = String(record.id ?? `main_option_${index + 1}`);
+          const title = String(record.title ?? "").trim();
+          return id && title ? { id, title } : null;
+        })
+        .filter((option): option is MainSectionOption => Boolean(option))
+    : [];
+
   return {
     categories: fallbackCategories,
     mainSectionTitle: String(root.mainSectionTitle ?? "Main Section"),
     mainSectionInputType: root.mainSectionInputType === "dropdown" ? "dropdown" : "checkbox",
+    mainSectionOptions,
     sections,
   };
 }

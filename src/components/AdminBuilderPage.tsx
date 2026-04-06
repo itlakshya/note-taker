@@ -18,6 +18,14 @@ function uid() {
   return Math.random().toString(16).slice(2) + Date.now().toString(16);
 }
 
+function moveStringItem<T>(items: T[], index: number, direction: number) {
+  const next = [...items];
+  const swapIndex = index + direction;
+  if (swapIndex < 0 || swapIndex >= next.length) return items;
+  [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+  return next;
+}
+
 function moveItem<T>(items: T[], index: number, direction: number) {
   const next = [...items];
   const swapIndex = index + direction;
@@ -70,6 +78,53 @@ function blankOption(text: string, inputType: OptionInputType): Option {
     subRequired: false,
     subOptions: [],
     childQuestions: [],
+  };
+}
+
+function createSection(title: string, state: FormState, mainOptionId?: string, categoryOwnerId?: string) {
+  return {
+    id: uid(),
+    title,
+    generalTitle: title,
+    mainOptionId,
+    categoryOwnerId,
+    generalQuestions: [],
+    categoryQuestions: state.categories.map((category) => ({ categoryId: category.id, title, questions: [] })),
+  };
+}
+
+function syncDropdownSections(state: FormState) {
+  const next = structuredClone(state);
+  const generalOptionIds = new Set(next.mainSectionOptions.map((option) => option.id));
+  const categoryOptionIds = new Map(next.categories.map((category) => [category.id, new Set(category.mainSectionOptions.map((option) => option.id))]));
+
+  next.sections = next.sections.filter((section) => {
+    if (!section.mainOptionId) return true;
+    if (section.categoryOwnerId) {
+      return categoryOptionIds.get(section.categoryOwnerId)?.has(section.mainOptionId) ?? false;
+    }
+    return generalOptionIds.has(section.mainOptionId);
+  });
+
+  next.sections.forEach((section) => {
+    next.categories.forEach((category) => {
+      const bucket = section.categoryQuestions.find((group) => group.categoryId === category.id);
+      if (!bucket) {
+        section.categoryQuestions.push({ categoryId: category.id, title: section.title || section.generalTitle || "", questions: [] });
+      }
+    });
+  });
+
+  return next;
+}
+
+function defaultCategoryState(name: string, id: string) {
+  return {
+    id,
+    name,
+    mainSectionTitle: "Main Section",
+    mainSectionInputType: "checkbox" as const,
+    mainSectionOptions: [],
   };
 }
 
@@ -615,6 +670,7 @@ export default function AdminBuilderPage() {
   const [sectionName, setSectionName] = useState("");
   const [categoryName, setCategoryName] = useState("");
   const [activeCategoryId, setActiveCategoryId] = useState("");
+  const [activeMainOptionId, setActiveMainOptionId] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -622,8 +678,10 @@ export default function AdminBuilderPage() {
     apiLoad()
       .then((data) => {
         if (!active) return;
-        setState(data);
+        const nextState = data.mainSectionInputType === "dropdown" ? syncDropdownSections(data) : data;
+        setState(nextState);
         setActiveCategoryId(GENERAL_SCOPE_ID);
+        setActiveMainOptionId(nextState.mainSectionOptions[0]?.id || "");
         setLoading(false);
       })
       .catch(() => {
@@ -647,11 +705,27 @@ export default function AdminBuilderPage() {
     }
   }, [activeCategoryId, state.categories]);
 
+  useEffect(() => {
+    const activeCategory = state.categories.find((category) => category.id === activeCategoryId);
+    const inputType = activeCategoryId === GENERAL_SCOPE_ID ? state.mainSectionInputType : (activeCategory?.mainSectionInputType || "checkbox");
+    const options = activeCategoryId === GENERAL_SCOPE_ID ? state.mainSectionOptions : (activeCategory?.mainSectionOptions || []);
+
+    if (inputType !== "dropdown") {
+      if (activeMainOptionId) setActiveMainOptionId("");
+      return;
+    }
+
+    const exists = options.some((option) => option.id === activeMainOptionId);
+    if (!exists) {
+      setActiveMainOptionId(options[0]?.id || "");
+    }
+  }, [activeCategoryId, activeMainOptionId, state.categories, state.mainSectionInputType, state.mainSectionOptions]);
+
   function patch(mutator: (next: FormState) => void) {
     setState((current) => {
       const next = structuredClone(current);
       mutator(next);
-      return next;
+      return next.mainSectionInputType === "dropdown" ? syncDropdownSections(next) : next;
     });
   }
 
@@ -673,6 +747,28 @@ export default function AdminBuilderPage() {
 
   const activeCategory = state.categories.find((category) => category.id === activeCategoryId);
   const activeScopeLabel = activeCategoryId === GENERAL_SCOPE_ID ? "General" : (activeCategory?.name || "No category");
+  const isGeneralScope = activeCategoryId === GENERAL_SCOPE_ID;
+  const currentMainSectionTitle = isGeneralScope ? state.mainSectionTitle : (activeCategory?.mainSectionTitle || "Main Section");
+  const currentMainSectionInputType = isGeneralScope ? state.mainSectionInputType : (activeCategory?.mainSectionInputType || "checkbox");
+  const currentMainSectionOptions = isGeneralScope ? state.mainSectionOptions : (activeCategory?.mainSectionOptions || []);
+  const visibleSections = !isGeneralScope
+    ? state.sections.reduce<Array<{ section: NonNullable<FormState["sections"][number]>; sectionIndex: number; lockedToMainOption: boolean }>>((items, section, sectionIndex) => {
+        if (section.categoryOwnerId !== activeCategoryId) return items;
+        if (currentMainSectionInputType === "dropdown") {
+          if (section.mainOptionId !== activeMainOptionId) return items;
+        } else if (section.mainOptionId) {
+          return items;
+        }
+        items.push({ section, sectionIndex, lockedToMainOption: false });
+        return items;
+      }, [])
+    : currentMainSectionInputType === "dropdown"
+      ? state.sections.reduce<Array<{ section: NonNullable<FormState["sections"][number]>; sectionIndex: number; lockedToMainOption: boolean }>>((items, section, sectionIndex) => {
+          if (section.mainOptionId !== activeMainOptionId || section.categoryOwnerId) return items;
+          items.push({ section, sectionIndex, lockedToMainOption: false });
+          return items;
+        }, [])
+      : state.sections.filter((section) => !section.mainOptionId && !section.categoryOwnerId).map((section, sectionIndex) => ({ section, sectionIndex, lockedToMainOption: false }));
 
   return (
     <>
@@ -703,7 +799,7 @@ export default function AdminBuilderPage() {
                   if (!name) return;
                   const categoryId = uid();
                   patch((next) => {
-                    next.categories.push({ id: categoryId, name });
+                    next.categories.push(defaultCategoryState(name, categoryId));
                     next.sections.forEach((section) => {
                       section.categoryQuestions.push({ categoryId, title: section.title || section.generalTitle || "", questions: [] });
                     });
@@ -724,7 +820,7 @@ export default function AdminBuilderPage() {
                     const duplicateId = uid();
                     patch((next) => {
                       const sourceCategory = next.categories[categoryIndex];
-                      next.categories.splice(categoryIndex + 1, 0, { id: duplicateId, name: `${sourceCategory.name} Copy` });
+                      next.categories.splice(categoryIndex + 1, 0, { ...structuredClone(sourceCategory), id: duplicateId, name: `${sourceCategory.name} Copy`, mainSectionOptions: structuredClone(sourceCategory.mainSectionOptions) });
                       next.sections.forEach((section) => {
                         const sourceGroup = section.categoryQuestions.find((group) => group.categoryId === sourceCategory.id);
                         section.categoryQuestions.push({ categoryId: duplicateId, title: sourceGroup?.title || section.title || section.generalTitle || "", questions: cloneQuestions(sourceGroup?.questions ?? []) });
@@ -736,6 +832,7 @@ export default function AdminBuilderPage() {
                     const removeId = category.id;
                     patch((next) => {
                       next.categories = next.categories.filter((item) => item.id != removeId);
+                      next.sections = next.sections.filter((section) => section.categoryOwnerId !== removeId);
                       next.sections.forEach((section) => {
                         section.categoryQuestions = section.categoryQuestions.filter((group) => group.categoryId != removeId);
                       });
@@ -756,40 +853,85 @@ export default function AdminBuilderPage() {
             <span className="muted">Includes Text, Dropdown, Checkbox, and Sub dropdown.</span>
           </div>
           <div className="cardBody">
+            {isGeneralScope ? (
+              <>
+                <div className="row">
+                  <div className="grow">
+                    <label>Main Section Title</label>
+                    <input
+                      type="text"
+                      value={currentMainSectionTitle}
+                      onChange={(event) =>
+                        patch((next) => {
+                          if (isGeneralScope) { next.mainSectionTitle = event.target.value; } else { const category = next.categories.find((item) => item.id === activeCategoryId); if (category) category.mainSectionTitle = event.target.value; }
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="selectCell">
+                    <label>Main Section Input</label>
+                    <select
+                      value={currentMainSectionInputType}
+                      onChange={(event) =>
+                        patch((next) => {
+                          const nextType = event.target.value === "dropdown" ? "dropdown" : "checkbox"; if (isGeneralScope) { next.mainSectionInputType = nextType; } else { const category = next.categories.find((item) => item.id === activeCategoryId); if (category) category.mainSectionInputType = nextType; }
+                        })
+                      }
+                    >
+                      <option value="checkbox">Checkbox</option>
+                      <option value="dropdown">Dropdown</option>
+                    </select>
+                  </div>
+                </div>
+
+                {currentMainSectionInputType === "dropdown" ? (
+                  <>
+                    <div className="divider" />
+                    <div className="row">
+                      <div className="grow">
+                        <label>Add Main Section Dropdown Value</label>
+                        <input id="main-section-option-input" type="text" placeholder="e.g., Sales Call" />
+                      </div>
+                      <div className="buttonCell">
+                        <label>&nbsp;</label>
+                        <button className="primaryButton" type="button" onClick={() => {
+                          const input = document.getElementById("main-section-option-input") as HTMLInputElement | null;
+                          const value = input?.value.trim() || "";
+                          if (!value) return;
+                          patch((next) => {
+                            if (isGeneralScope) { next.mainSectionOptions.push({ id: uid(), title: value }); } else { const category = next.categories.find((item) => item.id === activeCategoryId); if (category) category.mainSectionOptions.push({ id: uid(), title: value }); }
+                          });
+                          if (input) input.value = "";
+                        }}>+ Add Value</button>
+                      </div>
+                    </div>
+                    <div className="divider" />
+                    {currentMainSectionOptions.length ? currentMainSectionOptions.map((option, optionIndex) => (
+                      <div className="optionRow" key={option.id}>
+                        <input
+                          type="text"
+                          value={option.title}
+                          onChange={(event) => patch((next) => { if (isGeneralScope) { next.mainSectionOptions[optionIndex].title = event.target.value; } else { const category = next.categories.find((item) => item.id === activeCategoryId); if (category) category.mainSectionOptions[optionIndex].title = event.target.value; } })}
+                        />
+                        <div className="optionTools">
+                          <button className="smallButton" type="button" onClick={() => patch((next) => { if (isGeneralScope) { next.mainSectionOptions = moveStringItem(next.mainSectionOptions, optionIndex, -1); } else { const category = next.categories.find((item) => item.id === activeCategoryId); if (category) category.mainSectionOptions = moveStringItem(category.mainSectionOptions, optionIndex, -1); } })}>Up</button>
+                          <button className="smallButton" type="button" onClick={() => patch((next) => { if (isGeneralScope) { next.mainSectionOptions = moveStringItem(next.mainSectionOptions, optionIndex, 1); } else { const category = next.categories.find((item) => item.id === activeCategoryId); if (category) category.mainSectionOptions = moveStringItem(category.mainSectionOptions, optionIndex, 1); } })}>Down</button>
+                          <button className="dangerButton smallButton" type="button" onClick={() => patch((next) => { const category = !isGeneralScope ? next.categories.find((item) => item.id === activeCategoryId) : undefined; const removeId = isGeneralScope ? next.mainSectionOptions[optionIndex].id : (category?.mainSectionOptions[optionIndex]?.id || ""); if (!removeId) return; if (isGeneralScope) { next.mainSectionOptions = next.mainSectionOptions.filter((entry) => entry.id !== removeId); } else if (category) { category.mainSectionOptions = category.mainSectionOptions.filter((entry) => entry.id !== removeId); } next.sections = next.sections.filter((section) => section.mainOptionId !== removeId); })}>Remove</button>
+                        </div>
+                      </div>
+                    )) : <div className="muted">No dropdown values yet.</div>}
+                    {currentMainSectionOptions.length ? <><div className="divider" /><div className="categoryTabs">{currentMainSectionOptions.map((option) => <button key={option.id} className={`categoryTabButton${activeMainOptionId === option.id ? " active" : ""}`} type="button" onClick={() => setActiveMainOptionId(option.id)}>{option.title || "Untitled Value"}</button>)}</div></> : null}
+                    <div className="divider" />
+                  </>
+                ) : (
+                  <div className="divider" />
+                )}
+              </>
+            ) : null}
+
             <div className="row">
               <div className="grow">
-                <label>Main Section Title</label>
-                <input
-                  type="text"
-                  value={state.mainSectionTitle}
-                  onChange={(event) =>
-                    patch((next) => {
-                      next.mainSectionTitle = event.target.value;
-                    })
-                  }
-                />
-              </div>
-              <div className="selectCell">
-                <label>Main Section Input</label>
-                <select
-                  value={state.mainSectionInputType}
-                  onChange={(event) =>
-                    patch((next) => {
-                      next.mainSectionInputType = event.target.value === "dropdown" ? "dropdown" : "checkbox";
-                    })
-                  }
-                >
-                  <option value="checkbox">Checkbox</option>
-                  <option value="dropdown">Dropdown</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="divider" />
-
-            <div className="row">
-              <div className="grow">
-                <label>Add Section</label>
+                <label>{!isGeneralScope ? (currentMainSectionInputType === "dropdown" ? "Add Sub Section" : "Add Section") : currentMainSectionInputType === "dropdown" ? "Add Sub Section" : "Add Section"}</label>
                 <input type="text" value={sectionName} onChange={(event) => setSectionName(event.target.value)} />
               </div>
               <div className="buttonCell">
@@ -797,11 +939,17 @@ export default function AdminBuilderPage() {
                 <button className="primaryButton" type="button" onClick={() => {
                   const title = sectionName.trim();
                   if (!title) return;
+                  if (currentMainSectionInputType === "dropdown" && !activeMainOptionId) return;
                   patch((next) => {
-                    next.sections.push({ id: uid(), title, generalTitle: title, generalQuestions: [], categoryQuestions: next.categories.map((category) => ({ categoryId: category.id, title, questions: [] })) });
+                    next.sections.push(createSection(
+                      title,
+                      next,
+                      currentMainSectionInputType === "dropdown" ? activeMainOptionId : undefined,
+                      !isGeneralScope ? activeCategoryId : undefined,
+                    ));
                   });
                   setSectionName("");
-                }}>+ Add Section</button>
+                }}>{currentMainSectionInputType === "dropdown" ? "+ Add Sub Section" : "+ Add Section"}</button>
               </div>
             </div>
 
@@ -811,7 +959,7 @@ export default function AdminBuilderPage() {
 
             <div className="divider" />
 
-            {state.sections.length ? state.sections.map((section, sectionIndex) => {
+            {visibleSections.length ? visibleSections.map(({ section, sectionIndex, lockedToMainOption }) => {
               const questions = getQuestionList(state, sectionIndex, activeCategoryId);
               return (
                 <div className="sectionCard" key={section.id}>
@@ -821,16 +969,14 @@ export default function AdminBuilderPage() {
                       <div className="badge">{activeScopeLabel}</div>
                     </div>
                     <div className="sectionActions">
-                      <button className="smallButton" type="button" onClick={() => patch((next) => { next.sections = moveItem(next.sections, sectionIndex, -1); })}>Up</button>
-                      <button className="smallButton" type="button" onClick={() => patch((next) => { next.sections = moveItem(next.sections, sectionIndex, 1); })}>Down</button>
-                      <button className="dangerButton smallButton" type="button" onClick={() => patch((next) => { next.sections.splice(sectionIndex, 1); })}>Delete</button>
+                      {lockedToMainOption ? null : <><button className="smallButton" type="button" onClick={() => patch((next) => { next.sections = moveItem(next.sections, sectionIndex, -1); })}>Up</button><button className="smallButton" type="button" onClick={() => patch((next) => { next.sections = moveItem(next.sections, sectionIndex, 1); })}>Down</button><button className="dangerButton smallButton" type="button" onClick={() => patch((next) => { next.sections.splice(sectionIndex, 1); })}>Delete</button></>}
                     </div>
                   </div>
                   <div className="sectionBody">
                     <div className="row">
                       <div className="grow">
                         <label>Section Title</label>
-                        <input type="text" value={activeCategoryId === GENERAL_SCOPE_ID ? (section.generalTitle || section.title) : (getBucket(state, sectionIndex, activeCategoryId)?.title || section.title || section.generalTitle)} onChange={(event) => patch((next) => { if (activeCategoryId === GENERAL_SCOPE_ID) { next.sections[sectionIndex].generalTitle = event.target.value; } else { const bucket = getBucket(next, sectionIndex, activeCategoryId); if (bucket) bucket.title = event.target.value; } })} />
+                        <input type="text" value={activeCategoryId === GENERAL_SCOPE_ID ? (section.generalTitle || section.title) : (getBucket(state, sectionIndex, activeCategoryId)?.title || section.title || section.generalTitle)} onChange={(event) => patch((next) => { if (activeCategoryId === GENERAL_SCOPE_ID) { next.sections[sectionIndex].generalTitle = event.target.value; next.sections[sectionIndex].title = event.target.value; } else { const bucket = getBucket(next, sectionIndex, activeCategoryId); if (bucket) bucket.title = event.target.value; } })} />
                       </div>
                       <div className="selectCell"><label>Add Question Type</label><select defaultValue="" onChange={(event) => {
                         const value = event.target.value as QuestionType | "";
@@ -848,7 +994,7 @@ export default function AdminBuilderPage() {
                   </div>
                 </div>
               );
-            }) : <div className="muted">No sections yet. Add a section above.</div>}
+            }) : <div className="muted">{currentMainSectionInputType === "dropdown" ? "Add a main section dropdown value above to create question groups." : "No sections yet. Add a section above."}</div>}
           </div>
         </section>
       </main>
