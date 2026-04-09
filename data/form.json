@@ -43,6 +43,7 @@
           "label": "Call Openinbg",
           "required": false,
           "includeInCopy": true,
+          "showInlineDropdown": false,
           "options": [
             {
               "id": "aacfb04ed8d0519d57f325b0",
@@ -91,6 +92,7 @@
           "label": "New checkbox question",
           "required": false,
           "includeInCopy": true,
+          "showInlineDropdown": false,
           "options": [
             {
               "id": "bbdaff28c6b2c19d6121c686",
@@ -104,6 +106,35 @@
                   "text": ""
                 }
               ],
+              "childQuestions": []
+            }
+          ]
+        }
+      ],
+      "categoryQuestions": []
+    },
+    {
+      "id": "6e06d22be57cb819d70b4c7d7",
+      "title": "Spoken to :",
+      "generalTitle": "Spoken to :",
+      "mainOptionId": "5b98482f1373619d611fc437",
+      "generalQuestions": [
+        {
+          "id": "7942f9c26fc6c19d70b4dd7d",
+          "type": "dropdown",
+          "label": "",
+          "required": false,
+          "includeInCopy": true,
+          "showInlineDropdown": true,
+          "options": [
+            {
+              "id": "5b30589cf37da819d70b50ab6",
+              "text": "a",
+              "inputType": "dropdown",
+              "followUp": "none",
+              "followRequired": false,
+              "subRequired": false,
+              "subOptions": [],
               "childQuestions": []
             }
           ]

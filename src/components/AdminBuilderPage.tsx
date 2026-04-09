@@ -65,6 +65,7 @@ function blankQuestion(type: QuestionType, blankLabel = false): Question {
     required: false,
     includeInCopy: true,
     options: [],
+    showInlineDropdown: false,
   };
 }
 
@@ -191,36 +192,53 @@ function QuestionEditor({
       </div>
 
       {!hideQuestionMeta ? (
-        <div className="row">
-          <div className="grow">
-            <label>Question Text</label>
-            <input
-              type="text"
-              value={question.label}
-              onChange={(event) => onChange({ ...question, label: event.target.value })}
-            />
-          </div>
-          <div className="selectCell">
-            <label>Required?</label>
-            <select
-              value={String(question.required)}
-              onChange={(event) => onChange({ ...question, required: event.target.value === "true" })}
-            >
-              <option value="false">No</option>
-              <option value="true">Yes</option>
-            </select>
-          </div>
-          <div className="selectCell">
-            <label className="copyToggle">
+        <>
+          <div className="row">
+            <div className="grow">
+              <label>Question Text</label>
               <input
-                type="checkbox"
-                checked={question.includeInCopy}
-                onChange={(event) => onChange({ ...question, includeInCopy: event.target.checked })}
+                type="text"
+                value={question.label}
+                onChange={(event) => onChange({ ...question, label: event.target.value })}
               />
-              <span>Include In Copy Note</span>
-            </label>
+            </div>
+            <div className="selectCell">
+              <label>Required?</label>
+              <select
+                value={String(question.required)}
+                onChange={(event) => onChange({ ...question, required: event.target.value === "true" })}
+              >
+                <option value="false">No</option>
+                <option value="true">Yes</option>
+              </select>
+            </div>
+            <div className="selectCell">
+              <label className="copyToggle">
+                <input
+                  type="checkbox"
+                  checked={question.includeInCopy}
+                  onChange={(event) => onChange({ ...question, includeInCopy: event.target.checked })}
+                />
+                <span>Include In Copy Note</span>
+              </label>
+            </div>
           </div>
-        </div>
+          {question.type === "dropdown" ? (
+            <div className="row">
+              <div className="selectCell">
+                <label>Inline visibility</label>
+                <label className="copyToggle">
+                  <input
+                    type="checkbox"
+                    checked={question.showInlineDropdown}
+                    onChange={(event) => onChange({ ...question, showInlineDropdown: event.target.checked })}
+                  />
+                  <span>Always show dropdown (skip main checkbox)</span>
+                </label>
+              </div>
+            </div>
+          ) : null}
+        </>
       ) : null}
 
       {showCopyOnly ? (
@@ -246,13 +264,18 @@ function QuestionEditor({
               <label>{question.type === "subdropdown" ? "Add Sub Option" : "Add Option"}</label>
               <input id={optionInputId} type="text" placeholder={question.type === "subdropdown" ? "e.g., 1-10 / 11-20" : "e.g., Option A"} />
             </div>
-            {question.type !== "subdropdown" ? (
+            {question.type === "checkbox" ? (
               <div className="selectCell">
                 <label>Option Type</label>
-                <select id={`${optionInputId}__type`} defaultValue={question.type === "dropdown" ? "dropdown" : "checkbox"}>
+                <select id={`${optionInputId}__type`} defaultValue="checkbox">
                   <option value="checkbox">Checkbox</option>
                   <option value="dropdown">Dropdown</option>
                 </select>
+              </div>
+            ) : question.type === "dropdown" ? (
+              <div className="selectCell">
+                <label>Option Type</label>
+                <div className="muted">New entries will always render as a dropdown.</div>
               </div>
             ) : null}
             <div className="buttonCell">
@@ -264,9 +287,12 @@ function QuestionEditor({
                   const input = document.getElementById(optionInputId) as HTMLInputElement | null;
                   const value = input?.value.trim() || "";
                   if (!value) return;
-                  const optionType = question.type === "subdropdown"
-                    ? "checkbox"
-                    : ((document.getElementById(`${optionInputId}__type`) as HTMLSelectElement | null)?.value === "dropdown" ? "dropdown" : "checkbox");
+                  const optionType: OptionInputType =
+                      question.type === "subdropdown"
+                        ? "checkbox"
+                        : question.type === "dropdown"
+                          ? "dropdown"
+                          : ((document.getElementById(`${optionInputId}__type`) as HTMLSelectElement | null)?.value === "dropdown" ? "dropdown" : "checkbox");
                   onChange({ ...question, options: [...question.options, blankOption(value, optionType)] });
                   if (input) input.value = "";
                 }}

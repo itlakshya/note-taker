@@ -322,12 +322,18 @@ export default function UserFormPage() {
     return <div className="follow"><div className="muted">Select all that apply:</div><div className="subchecks">{option.subOptions.map((subOption, index) => { const id = `${fieldKey(scopeKey(selectedCategoryId, questionPath), questionPath)}__sub_${option.id}_${index}`; return <div className="subitem" key={id}><input type="checkbox" id={id} name={`${fieldKey(scopeKey(selectedCategoryId, questionPath), questionPath)}__sub_${option.id}`} value={subOption.text} /><label htmlFor={id}>{subOption.text}</label></div>; })}</div></div>;
   }
 
-  function renderQuestion(question: Question, path: string, inline = false, suppressHeader = false): React.JSX.Element {
+  function renderQuestion(
+    question: Question,
+    path: string,
+    inline = false,
+    suppressHeader = false,
+    forceEnabled = false,
+  ): React.JSX.Element {
     const field = fieldKey(scopeKey(selectedCategoryId, path), path);
     const hasError = fieldErrors.includes(field);
     const showLabel = !inline && question.type != "subdropdown" && Boolean(question.label);
     const isGeneralToggleQuestion = path.startsWith("general__") && question.type !== "text";
-    const isEnabled = !isGeneralToggleQuestion || Boolean(generalQuestionToggles[field]);
+    const isEnabled = forceEnabled || !isGeneralToggleQuestion || Boolean(generalQuestionToggles[field]);
     const questionText = `${question.label || "Question"}${question.required ? " *" : ""}`;
 
     if (question.type === "text") {
@@ -402,7 +408,42 @@ export default function UserFormPage() {
                     )}
                   </div>
                   {isMainSectionActive
-                    ? activeGeneralSections.map(({ section, questions }) => { const sectionTitle = getGeneralSectionTitle(section) || "Untitled Section"; const inlineQuestion = questions.length === 1 && questions[0].type !== "text" && isPlaceholderLabel(questions[0].label); if (inlineQuestion) { const question = questions[0]; const path = `general__${question.id}`; const field = fieldKey("general", path); return <div className="userSection" key={`general_${section.id}`}><div className="userSectionHeadInline"><div className="userSectionTitle">{sectionTitle}</div><label className="sectionToggleOnly" htmlFor={`${field}__toggle`} aria-label={`Toggle ${sectionTitle}`}><input type="checkbox" id={`${field}__toggle`} checked={Boolean(generalQuestionToggles[field])} onChange={(event) => setGeneralQuestionToggles((current) => ({ ...current, [field]: event.target.checked }))} /></label></div>{renderQuestion(question, path, true, true)}</div>; } return <div className="userSection" key={`general_${section.id}`}><div className="userSectionTitle">{sectionTitle}</div>{questions.map((question) => renderQuestion(question, `general__${question.id}`))}</div>; })
+                    ? activeGeneralSections.map(({ section, questions }) => {
+                        const sectionTitle = getGeneralSectionTitle(section) || "Untitled Section";
+                        const inlineQuestion = questions.length === 1 && questions[0].type !== "text" && isPlaceholderLabel(questions[0].label);
+                        if (inlineQuestion) {
+                          const question = questions[0];
+                          const path = `general__${question.id}`;
+                          const field = fieldKey("general", path);
+                          const shouldShowInline = question.type === "dropdown" && question.showInlineDropdown;
+                          return (
+                            <div className="userSection" key={`general_${section.id}`}>
+                              <div className="userSectionHeadInline">
+                                <div className="userSectionTitle">{sectionTitle}</div>
+                                {!shouldShowInline ? (
+                                  <label className="sectionToggleOnly" htmlFor={`${field}__toggle`} aria-label={`Toggle ${sectionTitle}`}>
+                                    <input
+                                      type="checkbox"
+                                      id={`${field}__toggle`}
+                                      checked={Boolean(generalQuestionToggles[field])}
+                                      onChange={(event) =>
+                                        setGeneralQuestionToggles((current) => ({ ...current, [field]: event.target.checked }))
+                                      }
+                                    />
+                                  </label>
+                                ) : null}
+                              </div>
+                              {renderQuestion(question, path, true, true, shouldShowInline)}
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="userSection" key={`general_${section.id}`}>
+                            <div className="userSectionTitle">{sectionTitle}</div>
+                            {questions.map((question) => renderQuestion(question, `general__${question.id}`))}
+                          </div>
+                        );
+                      })
                     : null}
                 </div>
               ) : null}
