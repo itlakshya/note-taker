@@ -66,6 +66,7 @@ function blankQuestion(type: QuestionType, blankLabel = false): Question {
     includeInCopy: true,
     options: [],
     showInlineDropdown: false,
+    showInlineCheckbox: false,
   };
 }
 
@@ -232,17 +233,28 @@ function QuestionEditor({
               </label>
             </div>
           </div>
-          {question.type === "dropdown" ? (
+          {question.type === "dropdown" || question.type === "checkbox" ? (
             <div className="row">
               <div className="selectCell">
                 <label>Inline visibility</label>
                 <label className="copyToggle">
                   <input
                     type="checkbox"
-                    checked={question.showInlineDropdown}
-                    onChange={(event) => onChange({ ...question, showInlineDropdown: event.target.checked })}
+                    checked={question.type === "dropdown" ? question.showInlineDropdown : question.showInlineCheckbox}
+                    onChange={(event) =>
+                      onChange({
+                        ...question,
+                        ...(question.type === "dropdown"
+                          ? { showInlineDropdown: event.target.checked }
+                          : { showInlineCheckbox: event.target.checked }),
+                      })
+                    }
                   />
-                  <span>Always show dropdown (skip main checkbox)</span>
+                  <span>
+                    {question.type === "dropdown"
+                      ? "Always show dropdown (skip main checkbox)"
+                      : "Always show checkbox options (skip main checkbox)"}
+                  </span>
                 </label>
               </div>
             </div>

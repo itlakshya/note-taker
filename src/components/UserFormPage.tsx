@@ -501,12 +501,14 @@ export default function UserFormPage() {
                         const inlineQuestion =
                           questions.length === 1 &&
                           questions[0].type !== "text" &&
-                          (questions[0].showInlineDropdown || isPlaceholderLabel(questions[0].label));
+                          (questions[0].showInlineDropdown || questions[0].showInlineCheckbox || isPlaceholderLabel(questions[0].label));
                         if (inlineQuestion) {
                           const question = questions[0];
                           const path = `general__${question.id}`;
                           const field = fieldKey("general", path);
-                          const shouldShowInline = question.type === "dropdown" && question.showInlineDropdown;
+                          const shouldShowInline =
+                            (question.type === "dropdown" && question.showInlineDropdown) ||
+                            (question.type === "checkbox" && question.showInlineCheckbox);
                           return (
                             <div className="userSection" key={`general_${section.id}`}>
                               <div className="userSectionHeadInline">
