@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { defaultState, getGeneralQuestions, getGeneralSectionTitle, getQuestionsForCategory, getSectionTitleForCategory, type FormState, type Option, type Question, type Section } from "@/lib/form-state";
+import { defaultState, getGeneralQuestions, getGeneralSectionTitle, getQuestionsForCategory, getSectionTitleForCategory, type FormState, type Option, type Question, type Section, type SubOption } from "@/lib/form-state";
 
 type Answer = {
   section: string;
@@ -131,18 +131,41 @@ export default function UserFormPage() {
     );
   }, [state.sections]);
 
-  function collectSubCheckboxValues(name: string) {
-    const selected: string[] = [];
-    const boxes = document.querySelectorAll<HTMLInputElement>(`input[type="checkbox"][name="${CSS.escape(name)}"]`);
-    boxes.forEach((box) => {
-      if (box.checked) selected.push(box.value);
-    });
-    return selected;
-  }
-
   function getSubDropdownValue(id: string) {
     const select = document.getElementById(id) as HTMLSelectElement | null;
     return select?.value || "";
+  }
+
+  type SubSelection = {
+    subOption: SubOption;
+    followUpValue: string;
+    id: string;
+  };
+
+  function getSubOptionFollowUpValue(baseId: string) {
+    const follow = document.getElementById(`${baseId}__f`) as HTMLInputElement | null;
+    return follow?.value.trim() || "";
+  }
+
+  function collectSubCheckboxSelections(field: string, option: Option): SubSelection[] {
+    const prefix = `${field}__sub_${option.id}`;
+    return option.subOptions
+      .map((subOption) => {
+        const checkboxId = `${prefix}_${subOption.id}`;
+        const checkbox = document.getElementById(checkboxId) as HTMLInputElement | null;
+        if (!checkbox?.checked) return null;
+        const followUpValue = subOption.followUp === "text" ? getSubOptionFollowUpValue(checkboxId) : "";
+        return { subOption, followUpValue, id: checkboxId };
+      })
+      .filter((entry): entry is SubSelection => Boolean(entry));
+  }
+
+  function getSelectedSubDropdown(field: string, option: Option) {
+    const selectId = `${field}__sd_${option.id}`;
+    const value = getSubDropdownValue(selectId);
+    const subOption = option.subOptions.find((item) => item.id === value);
+    const followUpValue = subOption?.followUp === "text" ? getSubOptionFollowUpValue(selectId) : "";
+    return { subOption, followUpValue, selectId };
   }
 
   function formatOptionAnswer(questionPath: string, option: Option) {
@@ -155,13 +178,17 @@ export default function UserFormPage() {
     }
 
     if (option.followUp === "subcheckbox") {
-      const values = collectSubCheckboxValues(`${baseField}__sub_${option.id}`);
-      return values.length ? `${option.text}: ${values.join(", ")}` : option.text;
+      const selections = collectSubCheckboxSelections(baseField, option);
+      if (!selections.length) return option.text;
+      const formatted = selections.map((selection) => (selection.followUpValue ? `${selection.subOption.text}: ${selection.followUpValue}` : selection.subOption.text));
+      return `${option.text}: ${formatted.join(", ")}`;
     }
 
     if (option.followUp === "subdropdown") {
-      const value = getSubDropdownValue(`${baseField}__sd_${option.id}`);
-      return value ? `${option.text}: ${value}` : option.text;
+      const selection = getSelectedSubDropdown(baseField, option);
+      if (!selection.subOption) return option.text;
+      const formatted = selection.followUpValue ? `${selection.subOption.text}: ${selection.followUpValue}` : selection.subOption.text;
+      return `${option.text}: ${formatted}`;
     }
 
     return option.text;
@@ -196,13 +223,21 @@ export default function UserFormPage() {
       }
 
       if (option?.followUp === "subcheckbox") {
-        const values = collectSubCheckboxValues(`${field}__sub_${option.id}`);
-        if (option.subRequired && !values.length) errors.push(field);
+        const selections = collectSubCheckboxSelections(field, option);
+        if (option.subRequired && !selections.length) errors.push(field);
+        selections.forEach((selection) => {
+          if (selection.subOption.followUp === "text" && selection.subOption.followRequired && !selection.followUpValue) {
+            errors.push(field);
+          }
+        });
       }
 
       if (option?.followUp === "subdropdown") {
-        const value = getSubDropdownValue(`${field}__sd_${option.id}`);
-        if (option.subRequired && !value) errors.push(field);
+        const selection = getSelectedSubDropdown(field, option);
+        if (option.subRequired && !selection.subOption) errors.push(field);
+        if (selection.subOption?.followUp === "text" && selection.subOption.followRequired && !selection.followUpValue) {
+          errors.push(field);
+        }
       }
 
       if (option) {
@@ -237,13 +272,21 @@ export default function UserFormPage() {
       }
 
       if (option.followUp === "subcheckbox") {
-        const values = collectSubCheckboxValues(`${field}__sub_${option.id}`);
-        if (option.subRequired && !values.length) errors.push(field);
+        const selections = collectSubCheckboxSelections(field, option);
+        if (option.subRequired && !selections.length) errors.push(field);
+        selections.forEach((selection) => {
+          if (selection.subOption.followUp === "text" && selection.subOption.followRequired && !selection.followUpValue) {
+            errors.push(field);
+          }
+        });
       }
 
       if (option.followUp === "subdropdown") {
-        const value = getSubDropdownValue(`${field}__sd_${option.id}`);
-        if (option.subRequired && !value) errors.push(field);
+        const selection = getSelectedSubDropdown(field, option);
+        if (option.subRequired && !selection.subOption) errors.push(field);
+        if (selection.subOption?.followUp === "text" && selection.subOption.followRequired && !selection.followUpValue) {
+          errors.push(field);
+        }
       }
     });
 
@@ -311,15 +354,60 @@ export default function UserFormPage() {
     setToast("Copied!");
   }
 
+  function renderSubOptionFollowUp(baseId: string, subOption: SubOption) {
+    if (subOption.followUp !== "text") return null;
+    return <div className="follow"><label className="questionLabel">Please specify:</label><input id={`${baseId}__f`} type="text" /></div>;
+  }
+
   function renderFollowUp(questionPath: string, option: Option | undefined) {
     if (!option || option.followUp === "none") return null;
+    const prefix = fieldKey(scopeKey(selectedCategoryId, questionPath), questionPath);
     if (option.followUp === "text") {
-      return <div className="follow"><label className="questionLabel">Please specify:</label><input id={`${fieldKey(scopeKey(selectedCategoryId, questionPath), questionPath)}__f_${option.id}`} type="text" /></div>;
+      return <div className="follow"><label className="questionLabel">Please specify:</label><input id={`${prefix}__f_${option.id}`} type="text" /></div>;
     }
     if (option.followUp === "subdropdown") {
-      return <div className="follow"><label className="questionLabel">Select one:</label><select id={`${fieldKey(scopeKey(selectedCategoryId, questionPath), questionPath)}__sd_${option.id}`} defaultValue=""><option value="">Select...</option>{option.subOptions.map((subOption, index) => <option key={`${option.id}_sd_${index}`} value={subOption.text}>{subOption.text}</option>)}</select></div>;
+      const selectId = `${prefix}__sd_${option.id}`;
+      const selectedSubOption = option.subOptions.find((subOption) => subOption.id === dropdownSelections[selectId]);
+      return (
+        <div className="follow">
+          <label className="questionLabel">Select one:</label>
+          <select
+            id={selectId}
+            defaultValue=""
+            onChange={(event) => setDropdownSelections((current) => ({ ...current, [selectId]: event.target.value }))}
+          >
+            <option value="">Select...</option>
+            {option.subOptions.map((subOption) => (
+              <option key={`${option.id}_sd_${subOption.id}`} value={subOption.id}>{subOption.text}</option>
+            ))}
+          </select>
+          {selectedSubOption ? renderSubOptionFollowUp(selectId, selectedSubOption) : null}
+        </div>
+      );
     }
-    return <div className="follow"><div className="muted">Select all that apply:</div><div className="subchecks">{option.subOptions.map((subOption, index) => { const id = `${fieldKey(scopeKey(selectedCategoryId, questionPath), questionPath)}__sub_${option.id}_${index}`; return <div className="subitem" key={id}><input type="checkbox" id={id} name={`${fieldKey(scopeKey(selectedCategoryId, questionPath), questionPath)}__sub_${option.id}`} value={subOption.text} /><label htmlFor={id}>{subOption.text}</label></div>; })}</div></div>;
+    return (
+      <div className="follow">
+        <div className="muted">Select all that apply:</div>
+        <div className="subchecks">
+          {option.subOptions.map((subOption) => {
+            const subId = `${prefix}__sub_${option.id}_${subOption.id}`;
+            return (
+              <div className="subitem" key={subId}>
+                <input
+                  type="checkbox"
+                  id={subId}
+                  name={`${prefix}__sub_${option.id}`}
+                  value={subOption.id}
+                  onChange={(event) => setCheckedOptions((current) => ({ ...current, [subId]: event.target.checked }))}
+                />
+                <label htmlFor={subId}>{subOption.text}</label>
+                {checkedOptions[subId] ? renderSubOptionFollowUp(subId, subOption) : null}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   }
 
   function renderQuestion(

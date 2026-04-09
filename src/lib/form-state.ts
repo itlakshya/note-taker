@@ -9,7 +9,10 @@ export type MainSectionOption = {
 };
 
 export type SubOption = {
+  id: string;
   text: string;
+  followUp: FollowUpType;
+  followRequired: boolean;
 };
 
 export type Option = {
@@ -123,12 +126,17 @@ function normalizeQuestion(value: unknown): Question {
             : "none",
         followRequired: Boolean(optionRecord.followRequired),
         subRequired: Boolean(optionRecord.subRequired),
-        subOptions: rawSubOptions.map((subOption) => {
+        subOptions: rawSubOptions.map((subOption, subOptionIndex) => {
           const subRecord =
             subOption && typeof subOption === "object"
               ? (subOption as Record<string, unknown>)
               : {};
-          return { text: String(subRecord.text ?? "") };
+          return {
+            id: String(subRecord.id ?? `${optionRecord.id ?? "sub"}_${subOptionIndex}`),
+            text: String(subRecord.text ?? ""),
+            followUp: subRecord.followUp === "text" ? "text" : "none",
+            followRequired: Boolean(subRecord.followRequired),
+          };
         }),
         childQuestions: rawChildQuestions.map(normalizeQuestion),
       };

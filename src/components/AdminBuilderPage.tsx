@@ -82,6 +82,15 @@ function blankOption(text: string, inputType: OptionInputType): Option {
   };
 }
 
+function blankSubOption(text: string) {
+  return {
+    id: uid(),
+    text,
+    followUp: "none" as FollowUpType,
+    followRequired: false,
+  };
+}
+
 function createSection(title: string, state: FormState, mainOptionId?: string, categoryOwnerId?: string) {
   return {
     id: uid(),
@@ -451,7 +460,7 @@ function QuestionEditor({
                             const options = [...question.options];
                             options[optionIndex] = {
                               ...option,
-                              subOptions: [...option.subOptions, { text: value }],
+                              subOptions: [...option.subOptions, blankSubOption(value)],
                             };
                             onChange({ ...question, options });
 
@@ -465,35 +474,89 @@ function QuestionEditor({
 
                     {option.subOptions.length ? (
                       option.subOptions.map((subOption, subOptionIndex) => (
-                        <div className="optionRow" key={`${option.id}_sub_${subOptionIndex}`}>
-                          <input
-                            type="text"
-                            value={subOption.text}
-                            onChange={(event) => {
-                              const options = [...question.options];
-                              const subOptions = [...option.subOptions];
-                              subOptions[subOptionIndex] = { text: event.target.value };
-                              options[optionIndex] = { ...option, subOptions };
-                              onChange({ ...question, options });
-                            }}
-                          />
-                          <div className="optionTools">
-                            <button
-                              className="dangerButton smallButton"
-                              type="button"
-                              onClick={() => {
+                        <div className="optionBlock" key={`${option.id}_sub_${subOption.id}`}>
+                          <div className="optionRow">
+                            <input
+                              type="text"
+                              value={subOption.text}
+                              onChange={(event) => {
                                 const options = [...question.options];
-                                options[optionIndex] = {
-                                  ...option,
-                                  subOptions: option.subOptions.filter(
-                                    (_, index) => index !== subOptionIndex,
-                                  ),
+                                const subOptions = [...option.subOptions];
+                                subOptions[subOptionIndex] = {
+                                  ...subOption,
+                                  text: event.target.value,
                                 };
+                                options[optionIndex] = { ...option, subOptions };
                                 onChange({ ...question, options });
                               }}
-                            >
-                              Remove
-                            </button>
+                            />
+                            <div className="optionTools">
+                              <button
+                                className="dangerButton smallButton"
+                                type="button"
+                                onClick={() => {
+                                  const options = [...question.options];
+                                  options[optionIndex] = {
+                                    ...option,
+                                    subOptions: option.subOptions.filter(
+                                      (_, index) => index !== subOptionIndex,
+                                    ),
+                                  };
+                                  onChange({ ...question, options });
+                                }}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                          <div className="nestedWrap">
+                            <div className="row">
+                              <div className="selectCell">
+                                <label>Follow-up</label>
+                                <select
+                                  value={subOption.followUp}
+                                  onChange={(event) => {
+                                    const options = [...question.options];
+                                    const subOptions = [...option.subOptions];
+                                    subOptions[subOptionIndex] = {
+                                      ...subOption,
+                                      followUp: event.target.value as FollowUpType,
+                                      followRequired:
+                                        event.target.value === "text" ? subOption.followRequired : false,
+                                    };
+                                    options[optionIndex] = { ...option, subOptions };
+                                    onChange({ ...question, options });
+                                  }}
+                                >
+                                  <option value="none">No follow-up</option>
+                                  <option value="text">Text box</option>
+                                </select>
+                              </div>
+                              {subOption.followUp === "text" ? (
+                                <div className="selectCell">
+                                  <label>Follow-up required?</label>
+                                  <select
+                                    value={subOption.followRequired ? "required" : "optional"}
+                                    onChange={(event) => {
+                                      const options = [...question.options];
+                                      const subOptions = [...option.subOptions];
+                                      subOptions[subOptionIndex] = {
+                                        ...subOption,
+                                        followRequired: event.target.value === "required",
+                                      };
+                                      options[optionIndex] = {
+                                        ...option,
+                                        subOptions,
+                                      };
+                                      onChange({ ...question, options });
+                                    }}
+                                  >
+                                    <option value="optional">Optional</option>
+                                    <option value="required">Required</option>
+                                  </select>
+                                </div>
+                              ) : null}
+                            </div>
                           </div>
                         </div>
                       ))
@@ -551,7 +614,7 @@ function QuestionEditor({
                             const options = [...question.options];
                             options[optionIndex] = {
                               ...option,
-                              subOptions: [...option.subOptions, { text: value }],
+                              subOptions: [...option.subOptions, blankSubOption(value)],
                             };
                             onChange({ ...question, options });
 
@@ -565,35 +628,89 @@ function QuestionEditor({
 
                     {option.subOptions.length ? (
                       option.subOptions.map((subOption, subOptionIndex) => (
-                        <div className="optionRow" key={`${option.id}_subdropdown_${subOptionIndex}`}>
-                          <input
-                            type="text"
-                            value={subOption.text}
-                            onChange={(event) => {
-                              const options = [...question.options];
-                              const subOptions = [...option.subOptions];
-                              subOptions[subOptionIndex] = { text: event.target.value };
-                              options[optionIndex] = { ...option, subOptions };
-                              onChange({ ...question, options });
-                            }}
-                          />
-                          <div className="optionTools">
-                            <button
-                              className="dangerButton smallButton"
-                              type="button"
-                              onClick={() => {
+                        <div className="optionBlock" key={`${option.id}_subdropdown_${subOption.id}`}>
+                          <div className="optionRow">
+                            <input
+                              type="text"
+                              value={subOption.text}
+                              onChange={(event) => {
                                 const options = [...question.options];
-                                options[optionIndex] = {
-                                  ...option,
-                                  subOptions: option.subOptions.filter(
-                                    (_, index) => index !== subOptionIndex,
-                                  ),
+                                const subOptions = [...option.subOptions];
+                                subOptions[subOptionIndex] = {
+                                  ...subOption,
+                                  text: event.target.value,
                                 };
+                                options[optionIndex] = { ...option, subOptions };
                                 onChange({ ...question, options });
                               }}
-                            >
-                              Remove
-                            </button>
+                            />
+                            <div className="optionTools">
+                              <button
+                                className="dangerButton smallButton"
+                                type="button"
+                                onClick={() => {
+                                  const options = [...question.options];
+                                  options[optionIndex] = {
+                                    ...option,
+                                    subOptions: option.subOptions.filter(
+                                      (_, index) => index !== subOptionIndex,
+                                    ),
+                                  };
+                                  onChange({ ...question, options });
+                                }}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                          <div className="nestedWrap">
+                            <div className="row">
+                              <div className="selectCell">
+                                <label>Follow-up</label>
+                                <select
+                                  value={subOption.followUp}
+                                  onChange={(event) => {
+                                    const options = [...question.options];
+                                    const subOptions = [...option.subOptions];
+                                    subOptions[subOptionIndex] = {
+                                      ...subOption,
+                                      followUp: event.target.value as FollowUpType,
+                                      followRequired:
+                                        event.target.value === "text" ? subOption.followRequired : false,
+                                    };
+                                    options[optionIndex] = { ...option, subOptions };
+                                    onChange({ ...question, options });
+                                  }}
+                                >
+                                  <option value="none">No follow-up</option>
+                                  <option value="text">Text box</option>
+                                </select>
+                              </div>
+                              {subOption.followUp === "text" ? (
+                                <div className="selectCell">
+                                  <label>Follow-up required?</label>
+                                  <select
+                                    value={subOption.followRequired ? "required" : "optional"}
+                                    onChange={(event) => {
+                                      const options = [...question.options];
+                                      const subOptions = [...option.subOptions];
+                                      subOptions[subOptionIndex] = {
+                                        ...subOption,
+                                        followRequired: event.target.value === "required",
+                                      };
+                                      options[optionIndex] = {
+                                        ...option,
+                                        subOptions,
+                                      };
+                                      onChange({ ...question, options });
+                                    }}
+                                  >
+                                    <option value="optional">Optional</option>
+                                    <option value="required">Required</option>
+                                  </select>
+                                </div>
+                              ) : null}
+                            </div>
                           </div>
                         </div>
                       ))
