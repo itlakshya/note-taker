@@ -498,7 +498,10 @@ export default function UserFormPage() {
                   {isMainSectionActive
                     ? activeGeneralSections.map(({ section, questions }) => {
                         const sectionTitle = getGeneralSectionTitle(section) || "Untitled Section";
-                        const inlineQuestion = questions.length === 1 && questions[0].type !== "text" && isPlaceholderLabel(questions[0].label);
+                        const inlineQuestion =
+                          questions.length === 1 &&
+                          questions[0].type !== "text" &&
+                          (questions[0].showInlineDropdown || isPlaceholderLabel(questions[0].label));
                         if (inlineQuestion) {
                           const question = questions[0];
                           const path = `general__${question.id}`;
