@@ -66,7 +66,6 @@ function blankQuestion(type: QuestionType, blankLabel = false): Question {
     includeInCopy: true,
     options: [],
     showInlineDropdown: false,
-    showSectionToggleWhenInline: false,
   };
 }
 
@@ -246,18 +245,6 @@ function QuestionEditor({
                   <span>Always show dropdown (skip main checkbox)</span>
                 </label>
               </div>
-              {question.showInlineDropdown ? (
-                <div className="selectCell">
-                  <label className="copyToggle">
-                    <input
-                      type="checkbox"
-                      checked={question.showSectionToggleWhenInline}
-                      onChange={(event) => onChange({ ...question, showSectionToggleWhenInline: event.target.checked })}
-                    />
-                    <span>Keep section checkbox even when inline</span>
-                  </label>
-                </div>
-              ) : null}
             </div>
           ) : null}
         </>
