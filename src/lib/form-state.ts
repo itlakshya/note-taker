@@ -34,6 +34,7 @@ export type Question = {
   includeInCopy: boolean;
   options: Option[];
   showInlineDropdown: boolean;
+  showSectionToggleWhenInline: boolean;
 };
 
 export type Category = {
@@ -104,6 +105,7 @@ function normalizeQuestion(value: unknown): Question {
     required: Boolean(record.required),
     includeInCopy: record.includeInCopy === undefined ? true : Boolean(record.includeInCopy),
     showInlineDropdown: Boolean(record.showInlineDropdown),
+    showSectionToggleWhenInline: Boolean(record.showSectionToggleWhenInline),
     options: rawOptions.map((option) => {
       const optionRecord =
         option && typeof option === "object" ? (option as Record<string, unknown>) : {};

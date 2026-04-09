@@ -507,11 +507,13 @@ export default function UserFormPage() {
                           const path = `general__${question.id}`;
                           const field = fieldKey("general", path);
                           const shouldShowInline = question.type === "dropdown" && question.showInlineDropdown;
+                          const forceEnabled = shouldShowInline && !question.showSectionToggleWhenInline;
+                          const showSectionToggle = !shouldShowInline || question.showSectionToggleWhenInline;
                           return (
                             <div className="userSection" key={`general_${section.id}`}>
                               <div className="userSectionHeadInline">
                                 <div className="userSectionTitle">{sectionTitle}</div>
-                                {!shouldShowInline ? (
+                                {showSectionToggle ? (
                                   <label className="sectionToggleOnly" htmlFor={`${field}__toggle`} aria-label={`Toggle ${sectionTitle}`}>
                                     <input
                                       type="checkbox"
@@ -524,7 +526,7 @@ export default function UserFormPage() {
                                   </label>
                                 ) : null}
                               </div>
-                              {renderQuestion(question, path, true, true, shouldShowInline)}
+                              {renderQuestion(question, path, true, true, forceEnabled)}
                             </div>
                           );
                         }
