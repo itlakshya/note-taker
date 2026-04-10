@@ -471,6 +471,16 @@ export default function UserFormPage() {
               {(state.mainSectionInputType === "dropdown" ? state.mainSectionOptions.length : generalSections.length) ? (
                 <div className="userSection">
                   <div className="userSectionHeadInline">
+                    {state.mainSectionInputType !== "dropdown" ? (
+                      <label className="sectionToggleOnly" htmlFor="main-section-toggle" aria-label={`Toggle ${state.mainSectionTitle || "Main Section"}`}>
+                        <input
+                          type="checkbox"
+                          id="main-section-toggle"
+                          checked={mainSectionEnabled}
+                          onChange={(event) => setMainSectionEnabled(event.target.checked)}
+                        />
+                      </label>
+                    ) : null}
                     <div className="userSectionTitle">{state.mainSectionTitle || "Main Section"}</div>
                     {state.mainSectionInputType === "dropdown" ? (
                       <div className="mainSectionSelectWrap">
@@ -484,16 +494,7 @@ export default function UserFormPage() {
                           {state.mainSectionOptions.map((option) => <option key={option.id} value={option.id}>{option.title}</option>)}
                         </select>
                       </div>
-                    ) : (
-                      <label className="sectionToggleOnly" htmlFor="main-section-toggle" aria-label={`Toggle ${state.mainSectionTitle || "Main Section"}`}>
-                        <input
-                          type="checkbox"
-                          id="main-section-toggle"
-                          checked={mainSectionEnabled}
-                          onChange={(event) => setMainSectionEnabled(event.target.checked)}
-                        />
-                      </label>
-                    )}
+                    ) : null}
                   </div>
                   {isMainSectionActive
                     ? activeGeneralSections.map(({ section, questions }) => {
@@ -512,7 +513,6 @@ export default function UserFormPage() {
                           return (
                             <div className="userSection" key={`general_${section.id}`}>
                               <div className="userSectionHeadInline">
-                                <div className="userSectionTitle">{sectionTitle}</div>
                                 {!shouldShowInline ? (
                                   <label className="sectionToggleOnly" htmlFor={`${field}__toggle`} aria-label={`Toggle ${sectionTitle}`}>
                                     <input
@@ -525,6 +525,7 @@ export default function UserFormPage() {
                                     />
                                   </label>
                                 ) : null}
+                                <div className="userSectionTitle">{sectionTitle}</div>
                               </div>
                               {renderQuestion(question, path, true, true, shouldShowInline)}
                             </div>
