@@ -151,7 +151,7 @@ select {
 .sectionCard,
 .questionCard,
 .userSection {
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .sectionHeadLeft {
@@ -243,14 +243,14 @@ select {
 
 label {
   display: block;
-  margin: 0 0 8px;
-  font-size: 12px;
+  margin: 0 0 4px;
+  font-size: 11px;
   font-weight: 700;
-  color: #334155;
+  color: #1f2937;
 }
 
 .questionLabel {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 750;
   color: var(--text);
 }
@@ -261,10 +261,15 @@ label {
   gap: 10px;
   margin: 0;
   cursor: pointer;
+  justify-content: flex-start;
+}
+
+.questionToggleRow input[type="checkbox"] {
+  order: 0;
 }
 
 .questionToggleText {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 750;
   color: var(--text);
   line-height: 1.35;
@@ -398,13 +403,19 @@ select:focus {
   line-height: 1.5;
 }
 
-.questionCard,
-.userQuestion {
+.questionCard {
   margin-bottom: 12px;
   border: 1px solid var(--border-faint);
   border-radius: 16px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(249, 250, 251, 0.96));
   padding: 10px 12px;
+}
+
+.userQuestion {
+  margin-bottom: 10px;
+  border: none;
+  background: transparent;
+  padding: 0;
 }
 
 .questionTop,
@@ -431,7 +442,6 @@ select:focus {
 }
 
 .subBox,
-.userSection,
 .categorySection,
 .categoryRow {
   border-radius: 16px;
@@ -447,9 +457,14 @@ select:focus {
 }
 
 .userSection {
-  border: 1px solid #dbe4f0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.95));
-  padding: 12px;
+  border: none;
+  background: transparent;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(221, 228, 240, 0.8);
+}
+
+.userSection:last-child {
+  border-bottom: none;
 }
 
 .subRow {
@@ -460,11 +475,14 @@ select:focus {
 .subchecks {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .checkitem {
-  padding: 6px 0;
+  padding: 4px 0;
+  gap: 8px;
+  display: flex;
+  align-items: center;
 }
 
 .checkitemBody,
@@ -495,7 +513,7 @@ select:focus {
 .subitem label,
 .checkitem label {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
 }
 
