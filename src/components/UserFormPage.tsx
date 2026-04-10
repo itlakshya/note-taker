@@ -470,7 +470,7 @@ export default function UserFormPage() {
             <form>
               {(state.mainSectionInputType === "dropdown" ? state.mainSectionOptions.length : generalSections.length) ? (
                 <div className="userSection">
-                  <div className="userSectionHeadInline">
+                  <div className="userSectionHeadInline typeCallHeader">
                     {state.mainSectionInputType !== "dropdown" ? (
                       <label className="sectionToggleOnly" htmlFor="main-section-toggle" aria-label={`Toggle ${state.mainSectionTitle || "Main Section"}`}>
                         <input
@@ -481,7 +481,7 @@ export default function UserFormPage() {
                         />
                       </label>
                     ) : null}
-                    <div className="userSectionTitle">{state.mainSectionTitle || "Main Section"}</div>
+                    <div className="userSectionTitle typeLabel">{state.mainSectionTitle || "Main Section"}</div>
                     {state.mainSectionInputType === "dropdown" ? (
                       <div className="mainSectionSelectWrap">
                         <select
