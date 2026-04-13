@@ -464,7 +464,7 @@ export default function UserFormPage() {
     <>
       <header className="topbar"><h1>User Form</h1></header>
       <main className="shell">
-        <section className="card" style={{ display: previewAnswers ? "none" : undefined }}>
+        <section className="card userFormCard" style={{ display: previewAnswers ? "none" : undefined }}>
           <div className="cardHeader"><h2>Fill the form</h2><span className="muted">Submit to preview your answers</span></div>
           <div className="cardBody">
             <form>
@@ -551,7 +551,7 @@ export default function UserFormPage() {
           </div>
         </section>
 
-        <section className="card" style={{ display: previewAnswers ? undefined : "none" }}>
+        <section className="card userFormCard" style={{ display: previewAnswers ? undefined : "none" }}>
           <div className="cardHeader"><h2>Preview</h2><span className="muted">{selectedCategoryName || "Selected category"}</span></div>
           <div className="cardBody">
             {previewAnswers ? Array.from(previewAnswers.filter((answer) => answer.includeInCopy).reduce((map, answer) => { if (!map.has(answer.section)) map.set(answer.section, [] as Answer[]); map.get(answer.section)?.push(answer); return map; }, new Map<string, Answer[]>()).entries()).map(([sectionTitle, items]) => <div className="userSection" key={sectionTitle}><div className="userSectionTitle">{sectionTitle}</div>{items.map((item, index) => <div className="previewRow" key={`${item.question}_${index}`}>{item.question ? <div className="previewQuestion">{item.question}</div> : null}<div>{item.answer}</div></div>)}</div>) : null}

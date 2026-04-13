@@ -148,6 +148,39 @@ select {
   padding: 12px;
 }
 
+.card.userFormCard .cardBody {
+  padding: 10px 14px 12px;
+}
+
+.card.userFormCard form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card.userFormCard .userSection {
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.card.userFormCard .userSectionTitle {
+  margin-bottom: 4px;
+}
+
+.card.userFormCard .userQuestion,
+.card.userFormCard .inlineQuestion {
+  margin-bottom: 4px;
+}
+
+.card.userFormCard .checklist,
+.card.userFormCard .subchecks {
+  gap: 4px;
+}
+
+.card.userFormCard .actions {
+  gap: 6px;
+}
+
 .sectionCard,
 .questionCard,
 .userSection {
